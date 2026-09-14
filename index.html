@@ -157,6 +157,7 @@
   }
   .cal-nav:disabled{opacity:.3;cursor:default;}
   .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11.5px;color:var(--muted);margin-bottom:4px;}
+  .cal-weekdays span:first-child, .cal-weekdays span:last-child{color:var(--danger);}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
   .cal-day{
     aspect-ratio:1;display:flex;align-items:center;justify-content:center;
@@ -165,6 +166,7 @@
   .cal-day:hover:not(:disabled):not(.empty){background:#f1ede4;}
   .cal-day.selected{background:var(--orange);color:#fff;font-weight:700;}
   .cal-day.today:not(.selected){border:1.5px solid var(--orange);}
+  .cal-day.weekend{color:var(--danger);}
   .cal-day:disabled{color:#cfc9ba;cursor:default;}
   .cal-day.empty{cursor:default;}
   .cal-close{
@@ -1346,9 +1348,11 @@ function renderCalendar(){
     const isPast = d < today;
     const isToday = d.getTime() === today.getTime();
     const isSelected = calSelectedDate && d.getTime() === calSelectedDate.getTime();
+    const dow = d.getDay(); // 0=Sun, 6=Sat
     const cls = ['cal-day'];
     if(isToday) cls.push('today');
     if(isSelected) cls.push('selected');
+    if((dow===0 || dow===6) && !isSelected) cls.push('weekend');
     html += `<button type="button" class="${cls.join(' ')}" data-date="${toIso(d)}" ${isPast?'disabled':''}>${day}</button>`;
   }
   grid.innerHTML = html;
@@ -1392,6 +1396,34 @@ document.getElementById('cal-next').addEventListener('click', ()=>{
   if(calViewMonth>11){ calViewMonth=0; calViewYear++; }
   renderCalendar();
 });
+
+// 좌우 스와이프로 달 이동
+(function(){
+  const popup = document.getElementById('cal-popup');
+  let touchStartX = null, touchStartY = null;
+  popup.addEventListener('touchstart', (e)=>{
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  popup.addEventListener('touchend', (e)=>{
+    if(touchStartX===null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    touchStartX = null;
+    if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    if(dx < 0){
+      calViewMonth++;
+      if(calViewMonth>11){ calViewMonth=0; calViewYear++; }
+      renderCalendar();
+    }else{
+      const isCurrentMonth = (calViewYear===today.getFullYear() && calViewMonth===today.getMonth());
+      if(isCurrentMonth) return;
+      calViewMonth--;
+      if(calViewMonth<0){ calViewMonth=11; calViewYear--; }
+      renderCalendar();
+    }
+  }, {passive:true});
+})();
 document.getElementById('cal-close').addEventListener('click', closeCalendar);
 document.getElementById('cal-overlay').addEventListener('click', (e)=>{
   if(e.target.id==='cal-overlay') closeCalendar();
