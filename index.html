@@ -203,13 +203,13 @@
   }
   .search-wrap input:focus{outline:none;border-color:var(--navy-2);}
 
-  .sec-tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
-  .sec-tabs::-webkit-scrollbar{display:none;}
+  .sec-tabs{display:flex;justify-content:space-between;gap:4px;overflow-x:hidden;margin-bottom:16px;padding-bottom:2px;}
   .sec-tab{
-    flex:0 0 auto;padding:8px 12px;border-radius:24px;border:none;
-    background:#efece3;color:#8a8477;font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;
+    flex:1 1 auto;min-width:0;padding:12px 6px;border-radius:9px;border:2px solid #1c1f26;
+    background:#fff;color:#1c1f26;font-size:12.5px;font-weight:900;white-space:nowrap;cursor:pointer;
+    text-align:center;letter-spacing:-.03em;
   }
-  .sec-tab.active{background:var(--navy);color:#fff;}
+  .sec-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
   .item-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
   .custom-section{display:flex;flex-direction:column;gap:16px;grid-column:1 / -1;width:100%;}
@@ -429,16 +429,14 @@
       <label>도착지역</label>
       <select id="in-dest">
         <option value="">선택해 주세요</option>
-        <option value="서울">서울</option>
-        <option value="경기도">경기도</option>
-        <option value="인천">인천</option>
+        <option value="수도권">서울·경기·인천</option>
         <option value="강원도">강원도</option>
-        <option value="충청남도">충청남도</option>
         <option value="충청북도">충청북도</option>
+        <option value="충청남도">충청남도 (대전·세종 포함)</option>
         <option value="전라북도">전라북도</option>
-        <option value="전라남도">전라남도</option>
-        <option value="경상북도">경상북도</option>
-        <option value="경상남도">경상남도</option>
+        <option value="전라남도">전라남도 (광주 포함)</option>
+        <option value="경상북도">경상북도 (대구 포함)</option>
+        <option value="경상남도">경상남도 (부산·울산 포함)</option>
         <option value="제주도">제주도</option>
       </select>
       <div class="err-msg">도착지역을 선택해 주세요.</div>
@@ -1102,7 +1100,7 @@ const WAREHOUSES = [
 ];
 
 const DEST_RATES = {
-  '서울':0, '경기도':0, '인천':0, '강원도':150, '충청남도':250, '충청북도':150,
+  '수도권':0, '강원도':150, '충청남도':250, '충청북도':150,
   '전라북도':350, '전라남도':450, '경상북도':400, '경상남도':450, '제주도':1100,
 };
 
@@ -1399,7 +1397,8 @@ document.getElementById('cal-overlay').addEventListener('click', (e)=>{
   if(e.target.id==='cal-overlay') closeCalendar();
 });
 
-document.getElementById('btn-1-next').addEventListener('click', ()=>{
+document.getElementById('btn-1-next').addEventListener('click', async ()=>{
+  document.querySelector('#f-zip .err-msg').textContent = '5자리 ZIP CODE를 입력해 주세요.';
   let allValid = true;
   fields.forEach(f=>{
     const val = document.getElementById(f.id).value;
@@ -1407,11 +1406,41 @@ document.getElementById('btn-1-next').addEventListener('click', ()=>{
     document.getElementById(f.wrap).classList.toggle('error', !ok);
     if(!ok) allValid = false; else state.customer[f.key] = val.trim();
   });
-  document.getElementById('s1-banner').classList.toggle('show', !allValid);
-  if(allValid){
-    goStep(2);
+
+  if(!allValid){
+    document.getElementById('s1-banner').classList.add('show');
+    return;
   }
+
+  // ZIP 형식은 맞아도 실존하는 ZIP인지 실시간으로 확인
+  const btn = document.getElementById('btn-1-next');
+  const originalLabel = btn.textContent;
+  btn.textContent = 'ZIP 코드 확인 중...';
+  btn.disabled = true;
+  const zipReal = await verifyZipExists(state.customer.zip);
+  btn.textContent = originalLabel;
+  btn.disabled = false;
+
+  if(zipReal === false){
+    document.getElementById('f-zip').classList.add('error');
+    document.getElementById('f-zip').querySelector('.err-msg').textContent = '실제 존재하는 ZIP 코드가 아니에요. 다시 확인해 주세요.';
+    document.getElementById('s1-banner').classList.add('show');
+    return;
+  }
+
+  document.getElementById('s1-banner').classList.remove('show');
+  goStep(2);
 });
+
+async function verifyZipExists(zip){
+  try{
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    return res.ok; // 404 등이면 false -> 실제 없는 zip
+  }catch(err){
+    console.error('zip verify failed (network) — allowing through', err);
+    return true; // 네트워크 오류 시엔 정상 진행 막지 않음
+  }
+}
 
 // ---------- STEP 2 : section tabs + list ----------
 let activeSectionId = SECTIONS[0].id;
@@ -1421,6 +1450,7 @@ const tabsEl = document.getElementById('sec-tabs');
 function sectionPhotoCount(secId){
   return state.items.filter(i=>findCat(i.catId)?.sectionId===secId).length;
 }
+const TAB_ICONS = {living:'sofa', bedroom:'bed', study:'book-open', kitchen:'utensils', utility:'box', custom:'pencil'};
 function renderTabs(){
   const allTabs = [...SECTIONS, {id:'custom', name:'직접입력'}];
   tabsEl.innerHTML = allTabs.map(sec=>`
