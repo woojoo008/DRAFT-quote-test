@@ -129,6 +129,48 @@
     background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-right:38px;}
   .field input:focus, .field select:focus{outline:none;border-color:var(--navy-2);}
   .field.error input, .field.error select{border-color:var(--danger);background:#fdf3f2;}
+  .field.error .date-display{border-color:var(--danger);background:#fdf3f2;}
+
+  .date-display{
+    width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:15.5px;background:var(--paper);color:var(--ink);font-family:inherit;
+    display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-sizing:border-box;
+  }
+  .date-display.placeholder{color:#9a958a;}
+  .date-display:focus{outline:none;border-color:var(--navy-2);}
+  .date-cal-icon{width:19px;height:19px;color:var(--muted);flex-shrink:0;}
+
+  .cal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(20,18,12,.45);
+    align-items:flex-end;justify-content:center;z-index:60;
+  }
+  .cal-overlay.show{display:flex;}
+  .cal-popup{
+    background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:480px;
+    padding:18px 18px 22px;font-family:inherit;
+  }
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-month-label{font-size:15.5px;font-weight:700;color:var(--navy);}
+  .cal-nav{
+    width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:#fff;
+    font-size:18px;color:var(--navy-2);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .cal-nav:disabled{opacity:.3;cursor:default;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11.5px;color:var(--muted);margin-bottom:4px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .cal-day{
+    aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:var(--ink);border-radius:50%;cursor:pointer;border:none;background:none;font-family:inherit;
+  }
+  .cal-day:hover:not(:disabled):not(.empty){background:#f1ede4;}
+  .cal-day.selected{background:var(--orange);color:#fff;font-weight:700;}
+  .cal-day.today:not(.selected){border:1.5px solid var(--orange);}
+  .cal-day:disabled{color:#cfc9ba;cursor:default;}
+  .cal-day.empty{cursor:default;}
+  .cal-close{
+    width:100%;margin-top:14px;padding:12px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:var(--navy-2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
   .err-msg{display:none;color:var(--danger);font-size:12.5px;margin-top:5px;}
   .field.error .err-msg{display:block;}
 
@@ -354,25 +396,34 @@
     <h1>기본 정보를 입력해 주세요</h1>
     <div class="banner" id="s1-banner">입력하신 정보를 다시 확인해 주세요. 잘못되었거나 비어있는 항목이 있습니다.</div>
 
+    <div class="field" id="f-packing-date">
+      <label>희망 포장일</label>
+      <div class="date-display" id="in-packing-date-display" tabindex="0">
+        <span id="in-packing-date-text">날짜를 선택해 주세요</span>
+        <svg class="date-cal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+      </div>
+      <input type="hidden" id="in-packing-date">
+      <div class="err-msg">희망 포장일을 선택해 주세요.</div>
+    </div>
     <div class="field" id="f-name">
       <label>여권 내 성함</label>
       <input type="text" id="in-name" placeholder="예: HONG GILDONG" autocomplete="name">
       <div class="err-msg">여권에 기재된 영문 성함을 입력해 주세요.</div>
     </div>
-    <div class="field" id="f-email">
-      <label>Email 주소</label>
-      <input type="email" id="in-email" placeholder="example@email.com" autocomplete="email">
-      <div class="err-msg">올바른 이메일 주소를 입력해 주세요.</div>
-    </div>
-    <div class="field" id="f-phone">
-      <label>미국 내 전화번호</label>
-      <input type="tel" id="in-phone" placeholder="예: 319-660-0001" inputmode="numeric" maxlength="12">
-      <div class="err-msg">숫자 10자리의 미국 전화번호를 입력해 주세요.</div>
-    </div>
     <div class="field" id="f-zip">
       <label>출발지 ZIP CODE</label>
       <input type="text" id="in-zip" placeholder="예: 90220" inputmode="numeric" maxlength="5">
       <div class="err-msg">5자리 ZIP CODE를 입력해 주세요.</div>
+    </div>
+    <div class="field" id="f-floor">
+      <label>출발지 층수</label>
+      <select id="in-floor">
+        <option value="">선택해 주세요</option>
+        <option value="low">1~2층</option>
+        <option value="elevYes">3층이상 엘레베이터O</option>
+        <option value="elevNo">3층이상 엘레베이터X</option>
+      </select>
+      <div class="err-msg">출발지 층수를 선택해 주세요.</div>
     </div>
     <div class="field" id="f-dest">
       <label>도착지역</label>
@@ -391,31 +442,6 @@
         <option value="제주도">제주도</option>
       </select>
       <div class="err-msg">도착지역을 선택해 주세요.</div>
-    </div>
-    <div class="field" id="f-packing-date">
-      <label>포장 희망 일자</label>
-      <input type="date" id="in-packing-date">
-      <div class="err-msg">포장 희망 일자를 선택해 주세요.</div>
-    </div>
-    <div class="field" id="f-residence">
-      <label>출발지 거주 형태</label>
-      <select id="in-residence">
-        <option value="">선택해 주세요</option>
-        <option value="house">하우스</option>
-        <option value="apartment">아파트</option>
-        <option value="townhome">타운홈 혹은 콘도</option>
-      </select>
-      <div class="err-msg">거주 형태를 선택해 주세요.</div>
-    </div>
-    <div class="field" id="f-floor" style="display:none;">
-      <label>층수 / 엘리베이터</label>
-      <select id="in-floor">
-        <option value="">선택해 주세요</option>
-        <option value="low">1층 &amp; 2층</option>
-        <option value="elevYes">3층 이상, 엘리베이터 있음</option>
-        <option value="elevNo">3층 이상, 엘리베이터 없음</option>
-      </select>
-      <div class="err-msg">층수/엘리베이터 여부를 선택해 주세요.</div>
     </div>
   </div>
 
@@ -536,6 +562,21 @@
   </div>
 
   <input type="file" id="camera-input" accept="image/*" capture="environment">
+
+  <div class="cal-overlay" id="cal-overlay">
+    <div class="cal-popup" id="cal-popup">
+      <div class="cal-header">
+        <button class="cal-nav" id="cal-prev" aria-label="이전 달">‹</button>
+        <div class="cal-month-label" id="cal-month-label">2026년 9월</div>
+        <button class="cal-nav" id="cal-next" aria-label="다음 달">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <button class="cal-close" id="cal-close">닫기</button>
+    </div>
+  </div>
 
   <div class="modal-overlay hidden" id="assembly-modal">
     <div class="modal-card">
@@ -1134,11 +1175,7 @@ function urbanSurchargeFor(zip){
 }
 
 function residenceSurcharge(){
-  const c = state.customer;
-  if(c.residenceType === 'house') return 0;
-  if(c.residenceType === 'apartment') return c.floorCategory === 'elevNo' ? 250 : 0;
-  if(c.residenceType === 'townhome') return (c.floorCategory === 'elevYes' || c.floorCategory === 'elevNo') ? 200 : 0;
-  return 0;
+  return state.customer.floorCategory === 'elevNo' ? 200 : 0;
 }
 
 function computeTotalCbm(){
@@ -1250,7 +1287,7 @@ function effectiveCbm(it, cat){
 }
 
 const state = {
-  customer:{name:'',email:'',phone:'',zip:'',dest:'',packingDate:'',residenceType:'',floorCategory:''},
+  customer:{name:'',zip:'',dest:'',packingDate:'',floorCategory:''},
   items:[] // {catId,label,min,max,cuft,note,photo}
 };
 let activeCatId = null;
@@ -1272,33 +1309,94 @@ function goStep(n){
 }
 
 // ---------- STEP 1 ----------
-document.getElementById('in-phone').addEventListener('input', (e)=>{
-  const digits = e.target.value.replace(/\D/g,'').slice(0,10);
-  let formatted = digits;
-  if(digits.length>6) formatted = digits.slice(0,3)+'-'+digits.slice(3,6)+'-'+digits.slice(6);
-  else if(digits.length>3) formatted = digits.slice(0,3)+'-'+digits.slice(3);
-  e.target.value = formatted;
-});
-
 const fields = [
   {key:'name', id:'in-name', wrap:'f-name', validate:v=>v.trim().length>=2},
-  {key:'email', id:'in-email', wrap:'f-email', validate:v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())},
-  {key:'phone', id:'in-phone', wrap:'f-phone', validate:v=>/^\d{10}$/.test(v.replace(/\D/g,''))},
   {key:'zip', id:'in-zip', wrap:'f-zip', validate:v=>/^\d{5}$/.test(v.trim())},
   {key:'dest', id:'in-dest', wrap:'f-dest', validate:v=>v.trim().length>=2},
   {key:'packingDate', id:'in-packing-date', wrap:'f-packing-date', validate:v=>v.trim().length>0},
-  {key:'residenceType', id:'in-residence', wrap:'f-residence', validate:v=>v.trim().length>0},
-  {key:'floorCategory', id:'in-floor', wrap:'f-floor', validate:v=>{
-    const resType = document.getElementById('in-residence').value;
-    if(resType==='house') return true; // not required for house
-    return v.trim().length>0;
-  }},
+  {key:'floorCategory', id:'in-floor', wrap:'f-floor', validate:v=>v.trim().length>0},
 ];
 
-document.getElementById('in-residence').addEventListener('change', (e)=>{
-  const floorField = document.getElementById('f-floor');
-  floorField.style.display = e.target.value==='house' ? 'none' : 'block';
-  if(e.target.value==='house') document.getElementById('in-floor').value = '';
+// ---------- 포장 희망 일자: 커스텀 달력 ----------
+const today = new Date();
+today.setHours(0,0,0,0);
+let calViewYear = today.getFullYear();
+let calViewMonth = today.getMonth(); // 0-11
+let calSelectedDate = null; // Date object
+
+const WEEKDAY_NAMES = ['일','월','화','수','목','금','토'];
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toIso(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function toDisplay(d){ return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`; }
+
+function renderCalendar(){
+  document.getElementById('cal-month-label').textContent = `${calViewYear}년 ${calViewMonth+1}월`;
+  const isCurrentMonth = (calViewYear===today.getFullYear() && calViewMonth===today.getMonth());
+  document.getElementById('cal-prev').disabled = isCurrentMonth;
+
+  const firstDay = new Date(calViewYear, calViewMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+
+  const grid = document.getElementById('cal-grid');
+  let html = '';
+  for(let i=0; i<firstDay; i++){
+    html += `<div class="cal-day empty"></div>`;
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(calViewYear, calViewMonth, day);
+    const isPast = d < today;
+    const isToday = d.getTime() === today.getTime();
+    const isSelected = calSelectedDate && d.getTime() === calSelectedDate.getTime();
+    const cls = ['cal-day'];
+    if(isToday) cls.push('today');
+    if(isSelected) cls.push('selected');
+    html += `<button type="button" class="${cls.join(' ')}" data-date="${toIso(d)}" ${isPast?'disabled':''}>${day}</button>`;
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.cal-day:not(.empty):not(:disabled)').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const [y,m,dd] = btn.dataset.date.split('-').map(Number);
+      calSelectedDate = new Date(y, m-1, dd);
+      document.getElementById('in-packing-date').value = toIso(calSelectedDate);
+      const textEl = document.getElementById('in-packing-date-text');
+      textEl.textContent = toDisplay(calSelectedDate);
+      document.getElementById('in-packing-date-display').classList.remove('placeholder');
+      closeCalendar();
+    });
+  });
+}
+
+function openCalendar(){
+  if(calSelectedDate){
+    calViewYear = calSelectedDate.getFullYear();
+    calViewMonth = calSelectedDate.getMonth();
+  }
+  renderCalendar();
+  document.getElementById('cal-overlay').classList.add('show');
+}
+function closeCalendar(){
+  document.getElementById('cal-overlay').classList.remove('show');
+}
+
+document.getElementById('in-packing-date-display').addEventListener('click', openCalendar);
+document.getElementById('in-packing-date-display').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openCalendar(); }
+});
+document.getElementById('cal-prev').addEventListener('click', ()=>{
+  calViewMonth--;
+  if(calViewMonth<0){ calViewMonth=11; calViewYear--; }
+  renderCalendar();
+});
+document.getElementById('cal-next').addEventListener('click', ()=>{
+  calViewMonth++;
+  if(calViewMonth>11){ calViewMonth=0; calViewYear++; }
+  renderCalendar();
+});
+document.getElementById('cal-close').addEventListener('click', closeCalendar);
+document.getElementById('cal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id==='cal-overlay') closeCalendar();
 });
 
 document.getElementById('btn-1-next').addEventListener('click', ()=>{
@@ -1754,8 +1852,6 @@ function renderReview(){
   const c = state.customer;
   document.getElementById('rev-customer').innerHTML = `
     <div class="rev-row"><span class="k">성함</span><span class="v">${escapeHtml(c.name)}</span></div>
-    <div class="rev-row"><span class="k">Email</span><span class="v">${escapeHtml(c.email)}</span></div>
-    <div class="rev-row"><span class="k">전화번호</span><span class="v">${escapeHtml(c.phone)}</span></div>
     <div class="rev-row"><span class="k">출발지 ZIP</span><span class="v">${escapeHtml(c.zip)}</span></div>
     <div class="rev-row"><span class="k">도착지역</span><span class="v">${escapeHtml(c.dest)}</span></div>
   `;
@@ -1949,8 +2045,6 @@ async function submitQuote(id){
     to_email: 'RICKY@CYHDS.COM',
     quote_id: id,
     customer_name: state.customer.name,
-    customer_email: state.customer.email,
-    customer_phone: state.customer.phone,
     customer_zip: state.customer.zip,
     customer_dest: state.customer.dest,
     item_count: state.items.length,
