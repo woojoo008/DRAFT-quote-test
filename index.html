@@ -306,6 +306,11 @@
   .estimate-breakdown .er{display:flex;justify-content:space-between;font-size:12.5px;color:var(--navy-2);padding:3px 0;}
   .estimate-disclaimer{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5;}
   .estimate-contact{font-size:13.5px;color:var(--ink);line-height:1.6;}
+.agree-row{display:flex;gap:10px;align-items:flex-start;cursor:pointer;}
+.agree-row input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--orange);cursor:pointer;}
+.agree-text{font-size:12.5px;color:var(--navy-2);line-height:1.65;}
+#agree-err{display:none;margin-top:10px;}
+#agree-err.show{display:block;}
   .rev-row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line);}
   .rev-row:last-child{border-bottom:none;}
   .rev-row .k{color:var(--muted);}
@@ -492,8 +497,17 @@
     </div>
 
     <div class="rev-card" id="rev-estimate-card">
-      <h3>예상 견적 금액</h3>
-      <div id="rev-estimate-body"><div class="estimate-loading">계산 중...</div></div>
+      <h3>이용 안내 및 동의</h3>
+      <label class="agree-row" for="agree-checkbox">
+        <input type="checkbox" id="agree-checkbox">
+        <span class="agree-text">
+          본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액이며, 실제 방문 확인 후 최종 금액은 달라질 수 있어요.
+          관세, 세금, 항구 처리비 등 부대비용은 이 견적에 포함되어 있지 않으며 별도로 안내드려요.
+          입력해 주신 물품 정보가 실제와 다를 경우 견적 내용이 조정될 수 있고,
+          입력해 주신 연락처(이메일 등)로 본 견적과 관련한 안내를 받는 것에 동의합니다.
+        </span>
+      </label>
+      <div class="err-msg" id="agree-err">위 내용에 동의해 주셔야 견적 신청이 가능해요.</div>
     </div>
   </div>
 
@@ -1921,7 +1935,6 @@ function updateBar2(){
 document.getElementById('btn-2-next').addEventListener('click', ()=>{
   renderReview();
   goStep(3);
-  renderEstimate();
 });
 
 function buildEstimateEmailHtml(result){
@@ -2073,8 +2086,18 @@ function renderReview(){
   document.getElementById('rev-custom-note').textContent = customNote.trim();
 }
 
+document.getElementById('agree-checkbox').addEventListener('change', function(){
+  if(this.checked) document.getElementById('agree-err').classList.remove('show');
+});
+
 document.getElementById('btn-3-back').addEventListener('click', ()=> goStep(2));
 document.getElementById('btn-3-next').addEventListener('click', ()=>{
+  const agree = document.getElementById('agree-checkbox');
+  if(!agree.checked){
+    document.getElementById('agree-err').classList.add('show');
+    agree.closest('.rev-card').scrollIntoView({block:'center', behavior:'smooth'});
+    return;
+  }
   goLoading();
   const id = 'HD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(1000+Math.random()*9000);
   document.getElementById('quote-id').textContent = id;
