@@ -53,6 +53,10 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!text) {
+      // Gemini의 실제 응답을 그대로 로그에 남겨서 원인(키 오류/할당량/안전필터 등)을 확인할 수 있게 함
+      console.error('Gemini returned no usable text. Full response:', JSON.stringify(data));
+    }
     const parsed = JSON.parse(text);
 
     let tier = parseInt(parsed.tier, 10);
