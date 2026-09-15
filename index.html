@@ -100,6 +100,8 @@
   .brand-manager{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;text-decoration:none;display:inline-block;}
   .steps{display:flex;gap:6px;padding:14px 20px 0;background:var(--navy);}
   .step-dot{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .step-dot.clickable{cursor:pointer;}
+  .step-dot.clickable:active{opacity:.7;}
   .step-dot .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.22);overflow:hidden;}
   .step-dot .bar span{display:block;height:100%;width:0%;background:var(--orange);transition:width .35s ease;}
   .step-dot.done .bar span{width:100%;}
@@ -409,6 +411,11 @@
       </div>
       <input type="hidden" id="in-packing-date">
       <div class="err-msg">희망 포장일을 선택해 주세요.</div>
+    </div>
+    <div class="field" id="f-email">
+      <label>견적 받으실 이메일 주소</label>
+      <input type="email" id="in-email" placeholder="예: example@gmail.com" autocomplete="email" inputmode="email">
+      <div class="err-msg">올바른 이메일 주소를 입력해 주세요.</div>
     </div>
     <div class="field" id="f-name">
       <label>여권 내 성함</label>
@@ -1316,7 +1323,7 @@ function effectiveCbm(it, cat){
 }
 
 const state = {
-  customer:{name:'',zip:'',dest:'',packingDate:'',floorCategory:''},
+  customer:{name:'',email:'',zip:'',dest:'',packingDate:'',floorCategory:''},
   items:[] // {catId,label,min,max,cuft,note,photo}
 };
 let activeCatId = null;
@@ -1325,21 +1332,34 @@ let customNote = '';
 let activeCustomSlotIndex = null;
 
 // ---------- step nav ----------
+let currentStep = 1;
 function goStep(n){
+  currentStep = n;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
   document.querySelectorAll('.step-dot').forEach(d=>{
     const s = parseInt(d.dataset.step);
     d.classList.toggle('active', s===n);
     d.classList.toggle('done', s<n);
+    // 완료된(지나온) 단계이고, 아직 제출 전(4단계 진입 전)일 때만 클릭으로 되돌아갈 수 있음
+    d.classList.toggle('clickable', s<n && n<4);
   });
   for(let i=1;i<=3;i++) document.getElementById('bar-'+i).style.display = (i===n)?'block':'none';
   window.scrollTo(0,0);
 }
+document.querySelectorAll('.step-dot').forEach(d=>{
+  d.addEventListener('click', ()=>{
+    const target = parseInt(d.dataset.step);
+    if(d.classList.contains('clickable') && target < currentStep){
+      goStep(target);
+    }
+  });
+});
 
 // ---------- STEP 1 ----------
 const fields = [
   {key:'name', id:'in-name', wrap:'f-name', validate:v=>v.trim().length>=2},
+  {key:'email', id:'in-email', wrap:'f-email', validate:v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())},
   {key:'zip', id:'in-zip', wrap:'f-zip', validate:v=>/^\d{5}$/.test(v.trim())},
   {key:'dest', id:'in-dest', wrap:'f-dest', validate:v=>v.trim().length>=2},
   {key:'packingDate', id:'in-packing-date', wrap:'f-packing-date', validate:v=>v.trim().length>0},
@@ -2019,6 +2039,7 @@ function renderReview(){
   const c = state.customer;
   document.getElementById('rev-customer').innerHTML = `
     <div class="rev-row"><span class="k">성함</span><span class="v">${escapeHtml(c.name)}</span></div>
+    <div class="rev-row"><span class="k">이메일</span><span class="v">${escapeHtml(c.email)}</span></div>
     <div class="rev-row"><span class="k">출발지 ZIP</span><span class="v">${escapeHtml(c.zip)}</span></div>
     <div class="rev-row"><span class="k">도착지역</span><span class="v">${escapeHtml(c.dest)}</span></div>
   `;
@@ -2214,6 +2235,7 @@ async function submitQuote(id){
     to_email: 'RICKY@CYHDS.COM',
     quote_id: id,
     customer_name: state.customer.name,
+    customer_email: state.customer.email,
     customer_zip: state.customer.zip,
     customer_dest: state.customer.dest,
     item_count: state.items.length,
