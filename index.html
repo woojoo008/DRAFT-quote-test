@@ -366,12 +366,12 @@
   .camera-modal video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
   .camera-topbar{position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:flex-end;z-index:2;}
   .camera-close{width:38px;height:38px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:18px;cursor:pointer;}
-  .camera-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-56%);width:78vw;max-width:420px;aspect-ratio:1/1;pointer-events:none;z-index:1;}
-  .cg-corner{position:absolute;width:32px;height:32px;border-color:#fff;border-style:solid;border-width:0;filter:drop-shadow(0 0 3px rgba(0,0,0,.6));}
-  .cg-corner.tl{top:0;left:0;border-top-width:4px;border-left-width:4px;border-radius:6px 0 0 0;}
-  .cg-corner.tr{top:0;right:0;border-top-width:4px;border-right-width:4px;border-radius:0 6px 0 0;}
-  .cg-corner.bl{bottom:0;left:0;border-bottom-width:4px;border-left-width:4px;border-radius:0 0 0 6px;}
-  .cg-corner.br{bottom:0;right:0;border-bottom-width:4px;border-right-width:4px;border-radius:0 0 6px 0;}
+  .camera-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);width:94vw;max-width:900px;aspect-ratio:1/1;pointer-events:none;z-index:1;}
+  .cg-corner{position:absolute;width:56px;height:56px;border-color:#fff;border-style:solid;border-width:0;filter:drop-shadow(0 0 3px rgba(0,0,0,.6));}
+  .cg-corner.tl{top:0;left:0;border-top-width:6px;border-left-width:6px;border-radius:10px 0 0 0;}
+  .cg-corner.tr{top:0;right:0;border-top-width:6px;border-right-width:6px;border-radius:0 10px 0 0;}
+  .cg-corner.bl{bottom:0;left:0;border-bottom-width:6px;border-left-width:6px;border-radius:0 0 0 10px;}
+  .cg-corner.br{bottom:0;right:0;border-bottom-width:6px;border-right-width:6px;border-radius:0 0 10px 0;}
   .camera-hint{position:absolute;bottom:150px;left:20px;right:20px;text-align:center;color:#fff;font-size:14px;line-height:1.5;text-shadow:0 1px 4px rgba(0,0,0,.7);z-index:2;}
   .camera-bottombar{position:absolute;bottom:28px;left:0;right:0;display:flex;justify-content:center;z-index:2;}
   .camera-shutter{width:70px;height:70px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;}
@@ -1379,6 +1379,9 @@ let activeCustomSlotIndex = null;
 // ---------- step nav ----------
 let currentStep = 1;
 function goStep(n){
+  if(currentStep === 2 && n !== 2 && typeof stopCameraStream === 'function'){
+    stopCameraStream(); // 물품촬영 단계를 벗어나면 카메라를 꺼서 배터리/개인정보를 보호 (다시 이 단계로 오면 최초 1회만 다시 권한을 물어봄)
+  }
   currentStep = n;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
@@ -1881,6 +1884,12 @@ async function openCustomCamera(){
   const video = document.getElementById('camera-video');
   document.getElementById('camera-hint').textContent = cameraHintText();
   modal.classList.remove('hidden');
+
+  // 이미 켜져 있는 카메라가 있으면 그대로 재사용 — 사진마다 권한 팝업이 다시 뜨지 않도록 함
+  if(cameraStream && cameraStream.getVideoTracks().some(t=>t.readyState==='live')){
+    video.srcObject = cameraStream;
+    return;
+  }
   try{
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:1280} },
@@ -1889,13 +1898,19 @@ async function openCustomCamera(){
     video.srcObject = cameraStream;
   }catch(err){
     console.error('camera access failed, falling back to native picker', err);
-    closeCustomCamera();
+    hideCameraUI();
     cameraInput.click();
   }
 }
 
-function closeCustomCamera(){
+// 모달만 닫고 카메라 스트림은 켜진 채로 둠 (다음 사진 촬영 시 재사용)
+function hideCameraUI(){
   document.getElementById('camera-modal').classList.add('hidden');
+}
+
+// 스트림 자체를 완전히 종료 (물품촬영 단계를 벗어날 때만 호출)
+function stopCameraStream(){
+  hideCameraUI();
   if(cameraStream){
     cameraStream.getTracks().forEach(t=>t.stop());
     cameraStream = null;
@@ -1903,7 +1918,7 @@ function closeCustomCamera(){
 }
 
 document.getElementById('camera-cancel').addEventListener('click', ()=>{
-  closeCustomCamera();
+  hideCameraUI();
   activeCatId = null;
   activeCustomSlotIndex = null;
 });
@@ -1915,7 +1930,7 @@ document.getElementById('camera-shutter').addEventListener('click', ()=>{
   canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
   canvas.toBlob(async (blob)=>{
-    closeCustomCamera();
+    hideCameraUI(); // 카메라는 계속 켜둔 채로 화면만 닫음
     await handleCapturedPhoto(blob);
   }, 'image/jpeg', 0.92);
 });
