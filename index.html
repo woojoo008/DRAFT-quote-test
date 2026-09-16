@@ -361,6 +361,21 @@
   .foot-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5;}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(20,18,12,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .camera-modal{position:fixed;inset:0;background:#000;z-index:200;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .camera-modal.hidden{display:none;}
+  .camera-modal video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .camera-topbar{position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:flex-end;z-index:2;}
+  .camera-close{width:38px;height:38px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:18px;cursor:pointer;}
+  .camera-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-56%);width:78vw;max-width:420px;aspect-ratio:1/1;pointer-events:none;z-index:1;}
+  .cg-corner{position:absolute;width:32px;height:32px;border-color:#fff;border-style:solid;border-width:0;filter:drop-shadow(0 0 3px rgba(0,0,0,.6));}
+  .cg-corner.tl{top:0;left:0;border-top-width:4px;border-left-width:4px;border-radius:6px 0 0 0;}
+  .cg-corner.tr{top:0;right:0;border-top-width:4px;border-right-width:4px;border-radius:0 6px 0 0;}
+  .cg-corner.bl{bottom:0;left:0;border-bottom-width:4px;border-left-width:4px;border-radius:0 0 0 6px;}
+  .cg-corner.br{bottom:0;right:0;border-bottom-width:4px;border-right-width:4px;border-radius:0 0 6px 0;}
+  .camera-hint{position:absolute;bottom:150px;left:20px;right:20px;text-align:center;color:#fff;font-size:14px;line-height:1.5;text-shadow:0 1px 4px rgba(0,0,0,.7);z-index:2;}
+  .camera-bottombar{position:absolute;bottom:28px;left:0;right:0;display:flex;justify-content:center;z-index:2;}
+  .camera-shutter{width:70px;height:70px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;}
+  .camera-shutter:active{background:var(--orange);}
   .modal-overlay.hidden{display:none;}
   .modal-card{background:#fff;border-radius:16px;padding:22px 20px;width:100%;max-width:340px;text-align:center;}
   .modal-title{font-size:15.5px;font-weight:700;color:var(--navy);margin-bottom:6px;}
@@ -586,6 +601,22 @@
   </div>
 
   <input type="file" id="camera-input" accept="image/*" capture="environment">
+
+  <div class="camera-modal hidden" id="camera-modal">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <canvas id="camera-canvas" style="display:none;"></canvas>
+    <div class="camera-topbar">
+      <button class="camera-close" id="camera-cancel" aria-label="닫기">✕</button>
+    </div>
+    <div class="camera-guide">
+      <span class="cg-corner tl"></span><span class="cg-corner tr"></span>
+      <span class="cg-corner bl"></span><span class="cg-corner br"></span>
+    </div>
+    <div class="camera-hint" id="camera-hint">물품 전체가 사각형 안에 들어오도록 맞춰서 촬영해 주세요</div>
+    <div class="camera-bottombar">
+      <button class="camera-shutter" id="camera-shutter" aria-label="촬영"></button>
+    </div>
+  </div>
 
   <div class="cal-overlay" id="cal-overlay">
     <div class="cal-popup" id="cal-popup">
@@ -1722,7 +1753,7 @@ function renderCustomSection(){
     card.addEventListener('click', ()=>{
       activeCustomSlotIndex = idx;
       activeCatId = null;
-      document.getElementById('camera-input').click();
+      openCamera();
     });
   });
 
@@ -1806,7 +1837,7 @@ function renderItemList(){
         }
         card.addEventListener('click', ()=>{
           activeCatId = cat.id;
-          document.getElementById('camera-input').click();
+          openCamera();
         });
       }
     });
@@ -1824,8 +1855,72 @@ renderTabs();
 renderItemList();
 
 const cameraInput = document.getElementById('camera-input');
-cameraInput.addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
+
+let cameraStream = null;
+
+function cameraHintText(){
+  if(activeCatId){
+    const cat = findCat(activeCatId);
+    if(cat) return `"${cat.label}" 전체가 사각형 안에 들어오도록 맞춰서 촬영해 주세요`;
+  }
+  return '물품 전체가 사각형 안에 들어오도록 맞춰서 촬영해 주세요';
+}
+
+function openCamera(){
+  // 가능하면 화면 안에 촬영 가이드가 보이는 자체 카메라를 열고,
+  // 지원되지 않는 환경(구형 브라우저, 권한 거부 등)에서는 기존 방식(폰 기본 카메라 앱)으로 자동 전환됩니다.
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    openCustomCamera();
+  }else{
+    cameraInput.click();
+  }
+}
+
+async function openCustomCamera(){
+  const modal = document.getElementById('camera-modal');
+  const video = document.getElementById('camera-video');
+  document.getElementById('camera-hint').textContent = cameraHintText();
+  modal.classList.remove('hidden');
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:1280} },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+  }catch(err){
+    console.error('camera access failed, falling back to native picker', err);
+    closeCustomCamera();
+    cameraInput.click();
+  }
+}
+
+function closeCustomCamera(){
+  document.getElementById('camera-modal').classList.add('hidden');
+  if(cameraStream){
+    cameraStream.getTracks().forEach(t=>t.stop());
+    cameraStream = null;
+  }
+}
+
+document.getElementById('camera-cancel').addEventListener('click', ()=>{
+  closeCustomCamera();
+  activeCatId = null;
+  activeCustomSlotIndex = null;
+});
+
+document.getElementById('camera-shutter').addEventListener('click', ()=>{
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob(async (blob)=>{
+    closeCustomCamera();
+    await handleCapturedPhoto(blob);
+  }, 'image/jpeg', 0.92);
+});
+
+async function handleCapturedPhoto(file){
   if(!file) return;
 
   if(activeCustomSlotIndex !== null){
@@ -1839,7 +1934,6 @@ cameraInput.addEventListener('change', async (e)=>{
       console.error(err);
       customSlots[slotIndex] = {photo:null, cloudUrl:null};
     }
-    cameraInput.value = '';
     renderItemList();
     return;
   }
@@ -1861,7 +1955,6 @@ cameraInput.addEventListener('change', async (e)=>{
     entry = {catId:cat.id, label:cat.label, cbm:cat.cbm, photo:null, cloudUrl:null, sizeTier:0, mismatchFlag:false};
   }
   state.items.push(entry);
-  cameraInput.value = '';
   activeCatId = null;
   renderTabs();
   renderItemList();
@@ -1871,6 +1964,12 @@ cameraInput.addEventListener('change', async (e)=>{
   }else if(cat.needsAssembly){
     askAssembly(entry);
   }
+}
+
+cameraInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  await handleCapturedPhoto(file);
+  cameraInput.value = '';
 });
 
 function askMismatch(cat, entry){
@@ -1890,7 +1989,7 @@ function askMismatch(cat, entry){
     renderItemList();
     updateBar2();
     activeCatId = cat.id;
-    document.getElementById('camera-input').click();
+    openCamera();
   };
   const onKeep = ()=>{
     entry.note = (entry.note ? entry.note + ' · ' : '') + '⚠️ 사진 불일치 확인됨(고객 유지)';
