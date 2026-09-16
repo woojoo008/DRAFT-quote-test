@@ -1004,6 +1004,11 @@ const TIER_PERCENT = {
   '1':4, '2':7, '3':12, '4':16, '5':19, '6':24, '7':28, '8':31, '9':36, '10':40,
   '-1':-3, '-2':-5, '-3':-8, '-4':-10, '-5':-13, '-6':-16, '-7':-17, '-8':-19, '-9':-22, '-10':-24,
 };
+// AI가 사진에서 판정한 크기 단계(sizeTier, -10~+10)를 %로 변환 — 0이거나 없으면 0%
+function tierPct(sizeTier){
+  if(!sizeTier) return 0;
+  return TIER_PERCENT[String(sizeTier)] ?? 0;
+}
 const DIM_DATA = {
   '장식장소': {w:30, d:16, h:42, realcbm:0.519, qty:1, loadcbm:0.669},
   '소파테이블': {w:39, d:20, h:16, realcbm:0.321, qty:1, loadcbm:0.414},
@@ -2380,9 +2385,13 @@ function buildPhotoRowsForPdf(){
     const dim = DIM_DATA[norm(cat.label)];
     const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
     const realPerUnit = dim ? dim.realcbm : 0;
-    const loadTotal = dim ? (dim.loadcbm*count*discount) : 0;
+    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영 (기존엔 이 값이 빠져있던 버그를 수정함)
+    const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
+    const loadTotal = loadSum*discount;
     totalLoad += loadTotal;
-    return {label:cat.label, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
+    const tierVals = entries.map(e=>tierPct(e.sizeTier));
+    const tierNote = tierVals.some(p=>p!==0) ? ` (AI크기판정 ${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')})` : '';
+    return {label:cat.label+tierNote, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
   });
   return {rows, totalLoad};
 }
@@ -2565,10 +2574,14 @@ async function submitQuote(id){
     const h = dim ? dim.h : '-';
     const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
     const realTotal = dim ? (dim.realcbm*count*discount).toFixed(3) : '-';
-    const loadTotal = dim ? (dim.loadcbm*count*discount).toFixed(3) : '-';
+    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영 (기존엔 이 값이 빠져있던 버그를 수정함)
+    const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
+    const loadTotal = dim ? (loadSum*discount).toFixed(3) : '-';
     const assemblyTxt = entries.some(e=>e.assembly) ? entries.map(e=>e.assembly?`(${e.assembly})`:'').join(' ') : '';
     const mismatchTxt = entries.some(e=>e.mismatchFlag) ? ' ⚠️사진확인필요' : '';
-    const noteTxt = assemblyTxt + mismatchTxt;
+    const tierVals = entries.map(e=>tierPct(e.sizeTier));
+    const tierTxt = tierVals.some(p=>p!==0) ? ` 🔍AI크기판정:${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')}` : '';
+    const noteTxt = assemblyTxt + mismatchTxt + tierTxt;
     return `<tr>
       <td style="padding:6px 8px;font-size:13px;text-align:center;">${photoTag}</td>
       <td style="padding:6px 8px;font-size:13px;">${escapeHtml(cat.label)} ${noteTxt}</td>
