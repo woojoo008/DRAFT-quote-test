@@ -112,6 +112,7 @@
 
   /* Content */
   .screen{flex:1;padding:22px 20px 100px;display:none;}
+  #screen-3{padding-bottom:170px;} /* bar-3에 버튼이 2개(견적신청+다시촬영)라 기본 100px보다 더 필요함 */
   .screen.active{display:block;animation:fade .25s ease;}
   @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
@@ -126,7 +127,7 @@
     font-size:15.5px;background:var(--paper);color:var(--ink);
     scroll-margin-top:90px;scroll-margin-bottom:130px;
   }
-  .field select{appearance:none;-webkit-appearance:none;
+  .field select{appearance:none;-webkit-appearance:none;font-size:10.85px; /* 요청대로 팝업 글자 크기를 기존(15.5px)의 70%로 축소 */
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23767a85' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-right:38px;}
   .field input:focus, .field select:focus{outline:none;border-color:var(--navy-2);}
@@ -309,6 +310,8 @@
 .agree-row{display:flex;gap:10px;align-items:flex-start;cursor:pointer;}
 .agree-row input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--orange);cursor:pointer;}
 .agree-text{font-size:12.5px;color:var(--navy-2);line-height:1.65;}
+.agree-text p{margin:0 0 8px 0;}
+.agree-text p:last-child{margin-bottom:0;}
 #agree-err{display:none;margin-top:10px;}
 #agree-err.show{display:block;}
   .rev-row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line);}
@@ -389,9 +392,40 @@
     padding:1px 5px;background:#eef7f0;color:var(--success);
   }
   .assembly-tag.x{background:#fdf1ef;color:var(--danger);}
+
+  /* ===== 견적서(PDF) 렌더링용 — 화면에는 보이지 않고 PDF 생성 시 잠깐 그려졌다가 캡처됨 ===== */
+  #pdf-render-area{position:fixed;left:-99999px;top:0;width:820px;background:#fff;z-index:-1;}
+  .pdf-page{width:820px;padding:36px 40px;background:#fff;font-family:'Courier New',monospace;color:#000;box-sizing:border-box;}
+  .pdf-logo{color:#c8471f;font-size:26px;font-weight:bold;letter-spacing:1px;}
+  .pdf-company{font-size:15px;font-weight:bold;margin-top:2px;}
+  .pdf-addr{font-size:11px;color:#333;margin-top:2px;}
+  .pdf-hr{border-top:2px solid #000;margin:14px 0 22px;}
+  .pdf-title{text-align:center;font-weight:bold;font-size:14px;margin-bottom:6px;}
+  .pdf-meta{text-align:center;font-size:11px;color:#444;margin-bottom:18px;}
+  .pdf-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .pdf-table th, .pdf-table td{border:1px solid #999;padding:6px 4px;text-align:center;}
+  .pdf-table td.td-left{text-align:left;padding-left:8px;}
+  .pdf-table td.bold{font-weight:bold;}
+  .pdf-note{font-size:10.5px;color:#333;text-align:center;margin-top:8px;}
+  .pdf-note.bold{font-weight:bold;background:#fff2a8;padding:4px;}
+  .pdf-totalbox{margin-top:14px;border:1px solid #999;}
+  .tt-row1{display:flex;border-bottom:1px solid #999;}
+  .tt-row1-label{flex:1;text-align:center;padding:6px;font-size:12px;font-weight:bold;background:#f1ede4;border-right:1px solid #999;}
+  .tt-row1-value{flex:1;text-align:center;padding:6px;font-size:12px;background:#fff2a8;}
+  .tt-row2{display:flex;}
+  .tt-row2-label{width:110px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:#f1ede4;border-right:1px solid #999;text-align:center;padding:6px;}
+  .tt-row2-mid{flex:1;display:flex;flex-direction:column;border-right:1px solid #999;}
+  .tt-cell{flex:1;display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:#fff2a8;border-bottom:1px solid #ddd;font-size:12px;}
+  .tt-cell:last-child{border-bottom:none;}
+  .tt-cell-sub{color:#555;}
+  .tt-cell-amt{font-weight:bold;}
+  .tt-row2-total{width:190px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;background:#fff2a8;}
+  .pdf-footer{margin-top:26px;font-size:10px;color:#555;text-align:left;}
 </style>
 </head>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <body>
 <div class="app">
 
@@ -451,9 +485,9 @@
       <label>출발지 층수</label>
       <select id="in-floor">
         <option value="">선택해 주세요</option>
-        <option value="low">1~2층</option>
-        <option value="elevYes">3층이상 엘레베이터O</option>
-        <option value="elevNo">3층이상 엘레베이터X</option>
+        <option value="low">1층 or 2층</option>
+        <option value="elevYes">3층이상 (elevator O)</option>
+        <option value="elevNo">3층이상 (elevator X)</option>
       </select>
       <div class="err-msg">출발지 층수를 선택해 주세요.</div>
     </div>
@@ -516,13 +550,21 @@
       <label class="agree-row" for="agree-checkbox">
         <input type="checkbox" id="agree-checkbox">
         <span class="agree-text">
-          본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액이며, 실제 방문 확인 후 최종 금액은 달라질 수 있어요.
-          관세, 세금, 항구 처리비 등 부대비용은 이 견적에 포함되어 있지 않으며 별도로 안내드려요.
-          입력해 주신 물품 정보가 실제와 다를 경우 견적 내용이 조정될 수 있고,
-          입력해 주신 연락처(이메일 등)로 본 견적과 관련한 안내를 받는 것에 동의합니다.
+          <p>본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액이며, 실제 방문 확인 후 최종 금액은 달라질 수 있어요.</p>
+          <p>관세, 세금, 항구 처리비 등 부대비용은 이 견적에 포함되어 있지 않으며 별도로 안내드려요.</p>
+          <p>입력해 주신 물품 정보가 실제와 다를 경우 견적 내용이 조정될 수 있어요.</p>
+          <p>입력해 주신 연락처(이메일 등)로 본 견적과 관련한 안내를 받는 것에 동의합니다.</p>
         </span>
       </label>
       <div class="err-msg" id="agree-err">위 내용에 동의해 주셔야 견적 신청이 가능해요.</div>
+
+      <label class="agree-row" for="agree-duplicate-checkbox" style="margin-top:16px;">
+        <input type="checkbox" id="agree-duplicate-checkbox">
+        <span class="agree-text">
+          <p>본 견적서는 이우주 팀장님께도 함께 전달되어 검토되고 있어요. 동일한 내용으로 중복 신청하지 않도록 부탁드려요.</p>
+        </span>
+      </label>
+      <div class="err-msg" id="agree-duplicate-err">위 내용을 확인해 주셔야 견적 신청이 가능해요.</div>
     </div>
   </div>
 
@@ -617,6 +659,8 @@
       <button class="camera-shutter" id="camera-shutter" aria-label="촬영"></button>
     </div>
   </div>
+
+  <div id="pdf-render-area"></div>
 
   <div class="cal-overlay" id="cal-overlay">
     <div class="cal-popup" id="cal-popup">
@@ -717,7 +761,14 @@ document.addEventListener('focusin', (e)=>{
 const EMAILJS_PUBLIC_KEY = 'VtQ7iTht-GUlJUTpK';   // Account 탭의 Public Key
 const EMAILJS_SERVICE_ID = 'service_rcbap8a';   // Email Services 에서 만든 서비스 ID (ricky@cyhds.com SMTP)
 const EMAILJS_TEMPLATE_ID = 'template_zkkn5zd';  // Email Templates 에서 만든 템플릿 ID (담당자 수신용)
-const EMAILJS_CUSTOMER_TEMPLATE_ID = 'template_3ahnzpa';  // 고객 접수확인 메일용 템플릿 ID
+const EMAILJS_CUSTOMER_TEMPLATE_ID = 'template_3ahnzpa';  // 고객용 견적서(PDF) 발송 템플릿 ID
+// ↑ 이 템플릿은 EmailJS 대시보드에서 아래처럼 설정되어 있어야 합니다:
+//   - To email: {{to_email}}
+//   - CC: ricky@cyhds.com (고정값으로 직접 입력하거나, {{cc_email}}로 연결해도 됨 — 코드에서 cc_email을 보내고 있음)
+//   - Subject: {{customer_name}} 님, ㈜현대해운 USA 에서 이주화물 운송에 대한 견적 안내 드립니다.
+//   - Body: 안내 문구(고정) + 아래 변수로 다운로드 링크 삽입
+//       {{quote_id}}  — 견적번호
+//       {{pdf_url}}   — 견적서 PDF 다운로드 링크 (버튼이나 <a href="{{pdf_url}}">로 넣기)
 
 // ===== Google Gemini API (사진 크기판단 · 항목 일치확인용) =====
 // 키는 더 이상 이 파일에 두지 않습니다. 대신 /api/analyze-photo.js 서버 함수가
@@ -1163,45 +1214,114 @@ SECTIONS.forEach(sec=>{
 });
 
 // ===== 예상 견적 자동계산 엔진 =====
-// 창고 좌표는 각 창고 주소의 ZIP코드 중심 좌표(근사치)입니다. 실제 번지수 기준 정확한 좌표가 아니라
-// ZIP 단위 근사 좌표이니, 25마일 경계선에 아주 가까운 경우 약간의 오차가 있을 수 있습니다.
-const WAREHOUSES = [
-  {id:'compton',    name:'COMPTON',    lat:33.8894, lng:-118.2201, rates:{off:2000, normal:2100, peak:2200}},
-  {id:'hayward',    name:'HAYWARD',    lat:37.6357, lng:-122.1075, rates:{off:2000, normal:2100, peak:2200}},
-  {id:'seattle',    name:'SEATTLE',    lat:47.4435, lng:-122.2884, rates:{off:2000, normal:2100, peak:2200}},
-  {id:'chicago',    name:'CHICAGO',    lat:42.0044, lng:-87.9773,  rates:{off:2000, normal:2100, peak:2200}},
-  {id:'dallas',     name:'DALLAS',     lat:32.8946, lng:-96.8686,  rates:{off:2000, normal:2100, peak:2200}},
-  {id:'atlanta',    name:'ATLANTA',    lat:33.9789, lng:-84.1447,  rates:{off:2000, normal:2100, peak:2200}},
-  {id:'ridgefield', name:'RIDGEFIELD', lat:40.8298, lng:-74.0093,  rates:{off:2000, normal:2100, peak:2200}},
-  {id:'oahu',       name:'OAHU',       lat:21.3069, lng:-157.8583, rates:{off:3500, normal:3600, peak:3800}},
-];
+// 고객 ZIP코드를 좌표로 바꾼 뒤, 아래 도시 목록 중 (도시 좌표 기준 반경 이내에 있는) 도시를 찾아
+// 그 도시의 할증금액을 적용하는 방식입니다. 예전의 "창고까지 거리(마일)" 기반 계산을 대체합니다.
+// 기준 3 CBM 가격(도시 할증 전)
+const BASE_PRICE_3CBM = 2000;
 
+// 도시 목록은 리키님이 작성하신 "도시별_할증_기준표.xlsx"를 그대로 옮긴 것입니다.
+// radius: 이 도시 좌표로부터 몇 마일 이내를 같은 요금으로 볼지, add: 그 지역 할증 금액($)
+const CITY_SURCHARGES = [
+  {city:'로스앤젤레스(LA 한인타운)', state:'CA', zip:'90005', lat:33.7866, lng:-118.2987, radius:20, add:0},
+  {city:'부에나파크/풀러턴', state:'CA', zip:'90621', lat:33.6403, lng:-117.7694, radius:20, add:0},
+  {city:'얼바인', state:'CA', zip:'92602', lat:33.718, lng:-117.7222, radius:20, add:0},
+  {city:'세리토스/라미라다', state:'CA', zip:'90703', lat:33.8669, lng:-118.0686, radius:30, add:0},
+  {city:'토런스/가디나', state:'CA', zip:'90503', lat:33.7866, lng:-118.2987, radius:40, add:0},
+  {city:'샌디에이고', state:'CA', zip:'92101', lat:32.7211, lng:-117.1744, radius:40, add:250},
+  {city:'샌프란시스코', state:'CA', zip:'94102', lat:37.7793, lng:-122.4166, radius:30, add:100},
+  {city:'산호세', state:'CA', zip:'95112', lat:37.37, lng:-121.8921, radius:30, add:100},
+  {city:'새크라멘토', state:'CA', zip:'95814', lat:38.5791, lng:-121.4809, radius:30, add:300},
+  {city:'시애틀/페더럴웨이', state:'WA', zip:'98003', lat:47.4323, lng:-121.8034, radius:40, add:100},
+  {city:'타코마', state:'WA', zip:'98402', lat:47.2615, lng:-122.4633, radius:40, add:250},
+  {city:'포틀랜드', state:'OR', zip:'97201', lat:45.4989, lng:-122.6932, radius:40, add:600},
+  {city:'유진', state:'OR', zip:'97401', lat:44.1179, lng:-123.0742, radius:40, add:900},
+  {city:'BOISE', state:'ID', zip:'83702', lat:43.662, lng:-116.195, radius:40, add:1500},
+  {city:'리노', state:'NV', zip:'89501', lat:39.6556, lng:-119.7046, radius:40, add:1300},
+  {city:'라스베가스', state:'NV', zip:'89101', lat:36.1737, lng:-115.1065, radius:40, add:1600},
+  {city:'피닉스', state:'AZ', zip:'85001', lat:33.704, lng:-112.3518, radius:40, add:1600},
+  {city:'투싼', state:'AZ', zip:'85701', lat:32.218, lng:-110.9709, radius:40, add:1800},
+  {city:'솔트레익시티', state:'UT', zip:'84101', lat:40.7561, lng:-111.9007, radius:40, add:1900},
+  {city:'덴버', state:'CO', zip:'80202', lat:39.7602, lng:-104.9966, radius:40, add:1900},
+  {city:'포트 콜린스', state:'CO', zip:'80521', lat:40.5923, lng:-105.2983, radius:40, add:2000},
+  {city:'콜로라드 스프링', state:'CO', zip:'80903', lat:38.8289, lng:-104.8099, radius:40, add:1800},
+  {city:'알버쿠키', state:'NM', zip:'87102', lat:35.0693, lng:-106.6485, radius:40, add:2100},
+  {city:'호놀룰루(오아후)', state:'HI', zip:'96813', lat:24.8598, lng:-168.0218, radius:40, add:1850},
+  {city:'시카고 다운타운', state:'IL', zip:'60601', lat:41.8119, lng:-87.6873, radius:10, add:200},
+  {city:'에반스톤', state:'IL', zip:'60201', lat:42.0491, lng:-87.7022, radius:10, add:200},
+  {city:'시카고 서버브', state:'IL', zip:'60630', lat:41.8119, lng:-87.6873, radius:30, add:0},
+  {city:'네이퍼빌', state:'IL', zip:'60540', lat:41.759, lng:-88.1524, radius:30, add:100},
+  {city:'샴페인', state:'IL', zip:'61820', lat:40.1018, lng:-88.1972, radius:30, add:450},
+  {city:'블루밍턴', state:'IN', zip:'47401', lat:39.0788, lng:-86.4351, radius:30, add:450},
+  {city:'샌루이스', state:'MO', zip:'63101', lat:38.6315, lng:-90.1923, radius:30, add:550},
+  {city:'아이오와 시티', state:'IA', zip:'52240', lat:41.6482, lng:-91.5416, radius:30, add:950},
+  {city:'데스 모이네스', state:'IA', zip:'50309', lat:41.5841, lng:-93.6203, radius:30, add:1100},
+  {city:'위스칸신', state:'WI', zip:'53703', lat:43.0531, lng:-89.3528, radius:30, add:600},
+  {city:'인디아나폴리스', state:'IN', zip:'46204', lat:39.7727, lng:-86.158, radius:30, add:550},
+  {city:'클리브랜드', state:'OH', zip:'44113', lat:41.4738, lng:-81.643, radius:30, add:1100},
+  {city:'톨래도', state:'OH', zip:'43604', lat:41.6558, lng:-83.5368, radius:40, add:900},
+  {city:'신시내티', state:'OH', zip:'45202', lat:39.1103, lng:-84.4861, radius:30, add:900},
+  {city:'미니애폴리스', state:'MN', zip:'55401', lat:44.9793, lng:-93.273, radius:40, add:800},
+  {city:'디트로이트/앤아버', state:'MI', zip:'48104', lat:42.2709, lng:-83.7278, radius:50, add:750},
+  {city:'그랜드 래피즈', state:'MI', zip:'49503', lat:42.9562, lng:-85.6607, radius:40, add:600},
+  {city:'랜싱', state:'MI', zip:'48933', lat:42.7314, lng:-84.5537, radius:40, add:700},
+  {city:'콜럼버스', state:'OH', zip:'43085', lat:40.0401, lng:-82.8972, radius:40, add:1100},
+  {city:'캔자스시티', state:'MO', zip:'64105', lat:39.1027, lng:-94.595, radius:40, add:1400},
+  {city:'댈러스/캐롤턴', state:'TX', zip:'75007', lat:33.0074, lng:-96.8959, radius:40, add:0},
+  {city:'샌안토니오', state:'TX', zip:'78205', lat:29.4241, lng:-98.4841, radius:40, add:900},
+  {city:'휴스턴', state:'TX', zip:'77036', lat:29.834, lng:-95.4342, radius:40, add:1200},
+  {city:'오스틴', state:'TX', zip:'78701', lat:30.2683, lng:-97.7414, radius:40, add:700},
+  {city:'바톤 로그', state:'LA', zip:'70801', lat:30.4492, lng:-91.1856, radius:50, add:1400},
+  {city:'애틀랜타/둘루스/스와니', state:'GA', zip:'30096', lat:33.9845, lng:-84.1529, radius:40, add:100},
+  {city:'웨스트포인트(기아공장)', state:'GA', zip:'31833', lat:32.9073, lng:-85.0775, radius:40, add:0},
+  {city:'ATHENS', state:'GA', zip:'30601', lat:33.9929, lng:-83.3537, radius:30, add:300},
+  {city:'콜럼버스', state:'GA', zip:'31901', lat:32.4729, lng:-84.9782, radius:30, add:400},
+  {city:'메이콘', state:'GA', zip:'31201', lat:32.8279, lng:-83.5951, radius:30, add:400},
+  {city:'멤피스', state:'TN', zip:'38103', lat:35.1549, lng:-90.0496, radius:30, add:850},
+  {city:'헌츠빌', state:'AL', zip:'35801', lat:34.7184, lng:-86.5564, radius:30, add:300},
+  {city:'낙스빌', state:'TN', zip:'37902', lat:35.945, lng:-83.8758, radius:30, add:400},
+  {city:'버밍헴', state:'AL', zip:'35203', lat:33.5192, lng:-86.8079, radius:30, add:300},
+  {city:'스타크빌', state:'MS', zip:'39759', lat:33.4255, lng:-88.8791, radius:30, add:550},
+  {city:'엔터프라이즈', state:'AL', zip:'36330', lat:31.3158, lng:-85.943, radius:30, add:800},
+  {city:'몽고메리(현대공장)', state:'AL', zip:'36104', lat:32.3738, lng:-86.2892, radius:40, add:500},
+  {city:'내슈빌', state:'TN', zip:'37201', lat:36.1657, lng:-86.7781, radius:40, add:550},
+  {city:'그린스빌', state:'NC', zip:'27834', lat:35.631, lng:-77.381, radius:40, add:600},
+  {city:'샬럿', state:'NC', zip:'28202', lat:35.2262, lng:-80.8435, radius:40, add:800},
+  {city:'콜럼비아', state:'SC', zip:'29201', lat:33.9875, lng:-81.0249, radius:40, add:800},
+  {city:'올랜도', state:'FL', zip:'32801', lat:28.5452, lng:-81.3733, radius:40, add:900},
+  {city:'마이애미', state:'FL', zip:'33101', lat:25.7791, lng:-80.1978, radius:40, add:1400},
+  {city:'탈라하시', state:'FL', zip:'32301', lat:30.4185, lng:-84.2034, radius:40, add:650},
+  {city:'잭슨빌', state:'FL', zip:'32202', lat:30.3284, lng:-81.656, radius:40, add:700},
+  {city:'뉴욕(맨하탄)', state:'NY', zip:'10001', lat:40.7504, lng:-73.9963, radius:10, add:300},
+  {city:'플러싱/퀸즈', state:'NY', zip:'11354', lat:40.7664, lng:-73.8262, radius:20, add:200},
+  {city:'버팔로', state:'NY', zip:'14202', lat:42.8897, lng:-78.8842, radius:40, add:1300},
+  {city:'시라큐스', state:'NY', zip:'13202', lat:43.0431, lng:-76.1508, radius:40, add:900},
+  {city:'로체스터', state:'NY', zip:'14604', lat:43.1566, lng:-77.604, radius:40, add:1100},
+  {city:'알바니', state:'NY', zip:'12207', lat:42.656, lng:-73.7508, radius:40, add:700},
+  {city:'뉴헤이븐', state:'CT', zip:'06510', lat:41.3098, lng:-72.9223, radius:30, add:300},
+  {city:'하트포드', state:'CT', zip:'06103', lat:41.7663, lng:-72.6746, radius:30, add:400},
+  {city:'포트리/팰리세이즈파크', state:'NJ', zip:'07024', lat:40.8487, lng:-73.974, radius:40, add:100},
+  {city:'필라델피아', state:'PA', zip:'19102', lat:39.9526, lng:-75.1665, radius:40, add:250},
+  {city:'핏츠버그', state:'PA', zip:'15222', lat:40.4344, lng:-80.0248, radius:40, add:1000},
+  {city:'해리스버그', state:'PA', zip:'17101', lat:40.2646, lng:-76.8696, radius:40, add:550},
+  {city:'보스턴', state:'MA', zip:'02108', lat:42.3538, lng:-71.1024, radius:40, add:600},
+  {city:'애난데일/페어팩스', state:'VA', zip:'22003', lat:38.8358, lng:-77.2128, radius:40, add:450},
+  {city:'워싱턴 D.C.', state:'DC', zip:'20001', lat:38.9119, lng:-77.0167, radius:40, add:550},
+  {city:'락빌', state:'MD', zip:'20850', lat:39.0896, lng:-77.1841, radius:40, add:600},
+];
 const DEST_RATES = {
   '수도권':0, '강원도':150, '충청남도':250, '충청북도':150,
   '전라북도':350, '전라남도':450, '경상북도':400, '경상남도':450, '제주도':1100,
 };
 
-const DISTANCE_TIERS = [
-  {max:25,  add:0},    {max:50,  add:0},    {max:100, add:200},  {max:150, add:300},
-  {max:200, add:500},  {max:250, add:700},  {max:300, add:800},  {max:350, add:900},
-  {max:400, add:1000}, {max:450, add:1100},
-];
-const DISTANCE_LIMIT_MILES = 450;
-
-const manhattanZips = Array.from({length: 10282-10001+1}, (_,i)=>String(10001+i));
-const URBAN_SURCHARGE = [
-  {name:'뉴욕 맨하탄', zips: manhattanZips, add:200},
-  {name:'시카고 다운타운(루프)', zips:['60601','60602','60603','60604','60605','60606','60607'], add:300},
-];
-
 // 수량체크 항목(생활잔짐)의 부피는 사진이 없어 정확한 CBM을 모르니, 업계 표준 이사 박스 부피로 근사합니다.
 const BOX_CBM = {L:0.127, M:0.085, S:0.054};
 
-function getSeason(monthIndex0to11){
-  if([4,5,6].includes(monthIndex0to11)) return 'peak';     // 5~7월
-  if([7,11,0].includes(monthIndex0to11)) return 'normal';  // 8월, 12~1월
-  return 'off';                                             // 2~4월, 9~11월
-}
+// 견적서(PDF)용 수량체크 박스의 실제 규격 — 가로/세로/높이(inch), 개당 실포장CBM, 개당 적재CBM
+const BOX_DIM = {
+  L: {label:'이불 (L)박스',      w:26, d:20, h:20, real:0.318737741, load:0.579465213},
+  M: {label:'의류&정장 (m)박스', w:25, d:17, h:16, real:0.174971417, load:0.300600895},
+  S: {label:'책&그릇 (s)박스',   w:22, d:14, h:12, real:0.095102111, load:0.163385427},
+};
 
 function haversineMiles(lat1, lon1, lat2, lon2){
   const R = 3958.8;
@@ -1226,27 +1346,14 @@ async function geocodeZip(zip){
   }
 }
 
-function findNearestWarehouse(lat, lng){
-  let best = null;
-  WAREHOUSES.forEach(wh=>{
-    const d = haversineMiles(lat, lng, wh.lat, wh.lng);
-    if(!best || d < best.dist) best = {warehouse: wh, dist: d};
-  });
-  return best;
-}
-
-function distanceSurcharge(miles){
-  for(const t of DISTANCE_TIERS){
-    if(miles <= t.max) return t.add;
-  }
-  return null; // beyond table -> caller checks DISTANCE_LIMIT_MILES separately
-}
-
-function urbanSurchargeFor(zip){
-  for(const u of URBAN_SURCHARGE){
-    if(u.zips.includes(zip)) return {add:u.add, name:u.name};
-  }
-  return {add:0, name:null};
+// 고객 좌표에서 반경 안에 들어오는 도시들을 모두 찾고, 겹치는 경우 할증금액이 더 높은 도시를 우선 적용
+function findCitySurcharge(lat, lng){
+  const matches = CITY_SURCHARGES
+    .map(c => ({...c, dist: haversineMiles(lat, lng, c.lat, c.lng)}))
+    .filter(c => c.dist <= c.radius);
+  if(matches.length === 0) return null;
+  matches.sort((a,b) => b.add - a.add || a.dist - b.dist); // 할증 높은 순 우선, 동률이면 더 가까운 쪽
+  return matches[0];
 }
 
 function residenceSurcharge(){
@@ -1271,35 +1378,45 @@ function computeTotalCbm(){
 function additionalCbmCost(totalCbm){
   if(totalCbm <= 3) return 0;
   const extra = totalCbm - 3;
-  const rate = totalCbm <= 8 ? 350 : 300;
+  const rate = totalCbm < 7 ? 350 : 300; // 7 CBM 미만이면 추가 1 CBM당 $350, 7 이상이면 $300
   return extra * rate;
 }
 
 // main entry point: returns either {contactNeeded:true, ...} or a full breakdown
-async function calculateEstimate(){
+// ZIP → 도시매칭 → 도착지/거주형태 할증까지 묶어서 계산하는 공용 헬퍼.
+// PDF 견적서(페이지별로 총 부피가 다름)와 화면상 견적 계산이 같은 로직을 쓰도록 분리함.
+async function getPricingContext(){
   const geo = await geocodeZip(state.customer.zip);
   if(!geo){
     return {error: true, message: 'ZIP 코드를 확인할 수 없어요. 다시 확인해 주세요.'};
   }
-  const {warehouse, dist} = findNearestWarehouse(geo.lat, geo.lng);
-  if(dist > DISTANCE_LIMIT_MILES){
-    return {contactNeeded: true, warehouse, dist};
+  const matchedCity = findCitySurcharge(geo.lat, geo.lng);
+  if(!matchedCity){
+    return {contactNeeded: true, geo};
   }
-  const packingDate = state.customer.packingDate ? new Date(state.customer.packingDate) : new Date();
-  const season = getSeason(packingDate.getMonth());
-  const baseRate = warehouse.rates[season];
   const destRate = DEST_RATES[state.customer.dest] || 0;
-  const distSurcharge = distanceSurcharge(dist) || 0;
-  const urban = urbanSurchargeFor(state.customer.zip);
   const resSurcharge = residenceSurcharge();
-  const totalCbm = computeTotalCbm();
+  return {matchedCity, destRate, resSurcharge};
+}
+
+// 한국 도착지역 할증 + 거주형태(엘리베이터) 할증은 모두 "기본 3큐빅" 금액에 합쳐서 표시함
+function priceForVolume(totalCbm, ctx){
+  const combinedBase = BASE_PRICE_3CBM + ctx.matchedCity.add + ctx.destRate + ctx.resSurcharge;
   const cbmCost = additionalCbmCost(totalCbm);
-  const total = baseRate + destRate + distSurcharge + urban.add + resSurcharge + cbmCost;
+  return {combinedBase, cbmCost, total: combinedBase + cbmCost, extraRate: totalCbm < 7 ? 350 : 300};
+}
+
+async function calculateEstimate(){
+  const ctx = await getPricingContext();
+  if(ctx.error || ctx.contactNeeded) return ctx;
+  const totalCbm = computeTotalCbm();
+  const priced = priceForVolume(totalCbm, ctx);
   return {
-    total, warehouse, dist, season, totalCbm,
-    breakdown: {baseRate, destRate, distSurcharge, urbanAdd: urban.add, urbanName: urban.name, resSurcharge, cbmCost},
+    total: priced.total, matchedCity: ctx.matchedCity, totalCbm,
+    breakdown: {baseRate: BASE_PRICE_3CBM, cityAdd: ctx.matchedCity.add, cityName: ctx.matchedCity.city, destRate: ctx.destRate, resSurcharge: ctx.resSurcharge, cbmCost: priced.cbmCost},
   };
 }
+
 
 function findCat(id){
   for(const sec of SECTIONS){
@@ -2080,59 +2197,22 @@ function buildEstimateEmailHtml(result){
     return `<p style="color:#888;">자동 견적 계산 실패${result?.message ? ' — '+result.message : ''}</p>`;
   }
   if(result.contactNeeded){
-    return `<p><b>거리 초과(${Math.round(result.dist)}마일, ${result.warehouse.name} 기준)</b> — 자동 견적 범위를 벗어나 담당자 확인이 필요해요.</p>`;
+    return `<p><b>등록된 도시 반경을 벗어난 지역</b> — 자동 견적 범위를 벗어나 담당자 확인이 필요해요.</p>`;
   }
   const b = result.breakdown;
-  const seasonLabel = {off:'비수기', normal:'일반', peak:'성수기'}[result.season];
   return `
     <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
       <tr><td style="padding:3px 16px 3px 0;color:#888;">예상 총액</td><td style="font-weight:bold;">$${Math.round(result.total).toLocaleString()}</td></tr>
-      <tr><td style="padding:3px 16px 3px 0;color:#888;">가장 가까운 창고</td><td>${result.warehouse.name} (약 ${Math.round(result.dist)}마일)</td></tr>
-      <tr><td style="padding:3px 16px 3px 0;color:#888;">시즌</td><td>${seasonLabel}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">기준 도시</td><td>${b.cityName}</td></tr>
       <tr><td style="padding:3px 16px 3px 0;color:#888;">총 부피</td><td>약 ${result.totalCbm.toFixed(2)} CBM</td></tr>
-      <tr><td style="padding:3px 16px 3px 0;color:#888;">창고 기본가</td><td>$${b.baseRate.toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">기본가(3 CBM)</td><td>$${b.baseRate.toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">도시 할증</td><td>$${b.cityAdd.toLocaleString()}</td></tr>
       <tr><td style="padding:3px 16px 3px 0;color:#888;">도착지역 할증</td><td>$${b.destRate.toLocaleString()}</td></tr>
-      <tr><td style="padding:3px 16px 3px 0;color:#888;">거리 할증</td><td>$${b.distSurcharge.toLocaleString()}</td></tr>
-      ${b.urbanAdd ? `<tr><td style="padding:3px 16px 3px 0;color:#888;">도심 할증(${b.urbanName})</td><td>$${b.urbanAdd.toLocaleString()}</td></tr>` : ''}
       <tr><td style="padding:3px 16px 3px 0;color:#888;">거주형태 할증</td><td>$${b.resSurcharge.toLocaleString()}</td></tr>
       <tr><td style="padding:3px 16px 3px 0;color:#888;">추가 부피 비용</td><td>$${Math.round(b.cbmCost).toLocaleString()}</td></tr>
     </table>`;
 }
 
-async function renderEstimate(){
-  const body = document.getElementById('rev-estimate-body');
-  body.innerHTML = '<div class="estimate-loading">계산 중...</div>';
-  const result = await calculateEstimate();
-  if(result.error){
-    body.innerHTML = `<div class="estimate-contact">${result.message}</div>`;
-    return;
-  }
-  if(result.contactNeeded){
-    body.innerHTML = `
-      <div class="estimate-contact">
-        가장 가까운 창고(${result.warehouse.name})까지 약 ${Math.round(result.dist)}마일로,
-        온라인 자동 견적 범위를 벗어나요. 담당자에게 직접 문의해 주세요.
-      </div>
-      <a class="btn btn-navy" style="margin-top:10px;" href="tel:319-660-0001">📞 담당자에게 전화하기</a>
-    `;
-    return;
-  }
-  const b = result.breakdown;
-  const seasonLabel = {off:'비수기', normal:'일반', peak:'성수기'}[result.season];
-  body.innerHTML = `
-    <div class="estimate-total">$${Math.round(result.total).toLocaleString()}</div>
-    <div class="estimate-sub">가장 가까운 창고: ${result.warehouse.name} (약 ${Math.round(result.dist)}마일) · ${seasonLabel} · 총 부피 약 ${result.totalCbm.toFixed(2)} CBM</div>
-    <div class="estimate-breakdown">
-      <div class="er"><span>창고 기본가</span><span>$${b.baseRate.toLocaleString()}</span></div>
-      <div class="er"><span>도착지역 할증</span><span>$${b.destRate.toLocaleString()}</span></div>
-      <div class="er"><span>거리 할증</span><span>$${b.distSurcharge.toLocaleString()}</span></div>
-      ${b.urbanAdd ? `<div class="er"><span>도심 특별 할증(${b.urbanName})</span><span>$${b.urbanAdd.toLocaleString()}</span></div>` : ''}
-      <div class="er"><span>거주형태 할증</span><span>$${b.resSurcharge.toLocaleString()}</span></div>
-      <div class="er"><span>추가 부피 비용(3 CBM 초과분)</span><span>$${Math.round(b.cbmCost).toLocaleString()}</span></div>
-    </div>
-    <div class="estimate-disclaimer">* 실시간 자동 계산된 예상 금액이며, 정식 견적서는 담당자 확인 후 24시간 이내 안내드려요.</div>
-  `;
-}
 
 // resize helper
 function resizeImage(file, maxDim, quality){
@@ -2227,13 +2307,18 @@ function renderReview(){
 document.getElementById('agree-checkbox').addEventListener('change', function(){
   if(this.checked) document.getElementById('agree-err').classList.remove('show');
 });
+document.getElementById('agree-duplicate-checkbox').addEventListener('change', function(){
+  if(this.checked) document.getElementById('agree-duplicate-err').classList.remove('show');
+});
 
 document.getElementById('btn-3-back').addEventListener('click', ()=> goStep(2));
 document.getElementById('btn-3-next').addEventListener('click', ()=>{
   const agree = document.getElementById('agree-checkbox');
-  if(!agree.checked){
-    document.getElementById('agree-err').classList.add('show');
-    agree.closest('.rev-card').scrollIntoView({block:'center', behavior:'smooth'});
+  const agreeDup = document.getElementById('agree-duplicate-checkbox');
+  if(!agree.checked || !agreeDup.checked){
+    document.getElementById('agree-err').classList.toggle('show', !agree.checked);
+    document.getElementById('agree-duplicate-err').classList.toggle('show', !agreeDup.checked);
+    document.getElementById('rev-estimate-card').scrollIntoView({block:'center', behavior:'smooth'});
     return;
   }
   goLoading();
@@ -2277,6 +2362,154 @@ async function shrinkForEmail(dataUrl, maxDim, quality){
     img.onerror = ()=>resolve(null);
     img.src = dataUrl;
   });
+}
+
+// ================= 견적서(PDF) 생성 =================
+// 페이지1: 사진 촬영한 물품만 기준 / 페이지2: 사진 촬영 물품 + 수량체크(생활잔짐) 박스를 합친 기준
+function buildPhotoRowsForPdf(){
+  const photoEntries = state.items.filter(it => findCat(it.catId)?.mode !== 'qty');
+  const groups = {};
+  photoEntries.forEach(it=>{
+    if(!groups[it.catId]) groups[it.catId] = [];
+    groups[it.catId].push(it);
+  });
+  let totalLoad = 0;
+  const rows = Object.values(groups).map(entries=>{
+    const cat = findCat(entries[0].catId);
+    const count = entries.length;
+    const dim = DIM_DATA[norm(cat.label)];
+    const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
+    const realPerUnit = dim ? dim.realcbm : 0;
+    const loadTotal = dim ? (dim.loadcbm*count*discount) : 0;
+    totalLoad += loadTotal;
+    return {label:cat.label, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
+  });
+  return {rows, totalLoad};
+}
+
+// 수량체크 항목은 L/M/S 박스로 환산 — 견적서에는 "고객이 체크한 개수의 60%"를 소수점 내림해서 반영
+function buildBoxRowsForPdf(){
+  const qtyEntries = state.items.filter(it => findCat(it.catId)?.mode === 'qty');
+  const totals = {L:0, M:0, S:0};
+  qtyEntries.forEach(it=>{
+    const size = SIZE_DATA[norm(it.label)] || 'S';
+    totals[size] += (it.qty || 0);
+  });
+  let totalLoad = 0;
+  const rows = [];
+  ['L','M','S'].forEach(size=>{
+    const count = Math.floor(totals[size] * 0.6); // 60% 반영, 소수점은 무조건 내림
+    if(count <= 0) return;
+    const dim = BOX_DIM[size];
+    const load = dim.load * count;
+    totalLoad += load;
+    rows.push({label:dim.label, w:dim.w, d:dim.d, h:dim.h, real:dim.real, count, load});
+  });
+  return {rows, totalLoad};
+}
+
+function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
+  const rowsHtml = rowsData.rows.map(r=>`
+    <tr>
+      <td class="td-left">${escapeHtml(r.label)}</td>
+      <td>${r.w}</td><td>${r.d}</td><td>${r.h}</td>
+      <td>${(+r.real).toFixed(9)}</td>
+      <td>${r.count}</td>
+      <td class="bold">${(+r.load).toFixed(9)}</td>
+    </tr>`).join('');
+
+  const totalBoxHtml = contactNeeded ? `
+    <div class="pdf-totalbox">
+      <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
+      <div style="padding:14px;text-align:center;font-size:12.5px;">담당자 확인 후 정확한 비용을 안내드립니다.</div>
+    </div>` : `
+    <div class="pdf-totalbox">
+      <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
+      <div class="tt-row2">
+        <div class="tt-row2-label">총 예상비용</div>
+        <div class="tt-row2-mid">
+          <div class="tt-cell"><span class="tt-cell-sub">기본 3 큐빅</span><span class="tt-cell-amt">$${priced.combinedBase.toLocaleString()}</span></div>
+          <div class="tt-cell"><span class="tt-cell-sub">추가큐빅</span><span class="tt-cell-amt">$${priced.extraRate}</span></div>
+        </div>
+        <div class="tt-row2-total">$${priced.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      </div>
+    </div>`;
+
+  return `
+  <div class="pdf-page">
+    <div class="pdf-logo">현대해운</div>
+    <div class="pdf-company">HYUNDAI SHIPPING USA INC.</div>
+    <div class="pdf-addr">18300 S. WILMINGTON AVE., UNIT 160, RANCHO DOMINGUEZ, CA 90220</div>
+    <div class="pdf-addr">TEL: (+1)-310-763-7770 / FAX: (+1)-310-763-7772 / www.cyhds.com</div>
+    <div class="pdf-hr"></div>
+    <div class="pdf-title">[THIS IS NOT THE FINAL INVOICE]</div>
+    <div class="pdf-meta">견적번호: ${escapeHtml(quoteId)} &nbsp;&nbsp;&nbsp; 작성일: ${dateStr}</div>
+    <table class="pdf-table">
+      <thead>
+        <tr>
+          <th rowspan="2">아이템</th>
+          <th colspan="3">전체 부피 (inch)</th>
+          <th rowspan="2">실 포장<br>CBM</th>
+          <th rowspan="2">수량</th>
+          <th rowspan="2">적재 CBM</th>
+        </tr>
+        <tr><th>가로</th><th>세로</th><th>높이</th></tr>
+      </thead>
+      <tbody>${rowsHtml || '<tr><td colspan="7" style="padding:14px;color:#888;">해당 항목 없음</td></tr>'}</tbody>
+    </table>
+    <div class="pdf-note">all information is provided by Ethan Allen product . MISC items are not included.</div>
+    <div class="pdf-note">Estimate is not the final shipping cost and It will be made by acutal volume.</div>
+    ${totalBoxHtml}
+    <div class="pdf-note bold">Custom clearance is not included</div>
+    <div class="pdf-footer">18300 S. WILMINGTON AVE. UNIT 160, RANCHO DOMINGUEZ, CA 90220 *TEL: 310-763-7770, FAX: 310-763-7772</div>
+  </div>`;
+}
+
+async function renderPdfPageToCanvas(html){
+  const area = document.getElementById('pdf-render-area');
+  area.innerHTML = html;
+  await new Promise(r=>setTimeout(r, 50)); // 레이아웃이 자리잡을 시간을 잠깐 줌
+  const canvas = await html2canvas(area.firstElementChild, {scale:2, backgroundColor:'#ffffff'});
+  area.innerHTML = '';
+  return canvas;
+}
+
+// 2페이지 PDF를 만들어 data URI 문자열로 반환 (실패 시 null)
+async function generateQuotePdf(quoteId){
+  if(!window.jspdf || !window.html2canvas){
+    console.error('jsPDF/html2canvas 로드 실패 — PDF 생성 불가');
+    return null;
+  }
+  try{
+    const ctx = await getPricingContext();
+    const contactNeeded = !!(ctx.error || ctx.contactNeeded);
+    const dateStr = new Date().toLocaleDateString('ko-KR');
+
+    const photoRows = buildPhotoRowsForPdf();
+    const boxRows = buildBoxRowsForPdf();
+    const combinedRows = {
+      rows: [...photoRows.rows, ...boxRows.rows],
+      totalLoad: photoRows.totalLoad + boxRows.totalLoad,
+    };
+    const priced1 = contactNeeded ? null : priceForVolume(photoRows.totalLoad, ctx);
+    const priced2 = contactNeeded ? null : priceForVolume(combinedRows.totalLoad, ctx);
+
+    const { jsPDF } = window.jspdf;
+    const canvas1 = await renderPdfPageToCanvas(pdfPageHtml(photoRows, priced1, quoteId, dateStr, contactNeeded));
+    const h1 = 820 * canvas1.height / canvas1.width;
+    const doc = new jsPDF({unit:'px', format:[820, h1]});
+    doc.addImage(canvas1.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h1);
+
+    const canvas2 = await renderPdfPageToCanvas(pdfPageHtml(combinedRows, priced2, quoteId, dateStr, contactNeeded));
+    const h2 = 820 * canvas2.height / canvas2.width;
+    doc.addPage([820, h2]);
+    doc.addImage(canvas2.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h2);
+
+    return doc.output('datauristring');
+  }catch(err){
+    console.error('PDF 생성 실패', err);
+    return null;
+  }
 }
 
 async function submitQuote(id){
@@ -2415,11 +2648,36 @@ async function submitQuote(id){
     staffOk = await sendEmailWithRetry(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
   }
 
+  // ---- 고객용 견적서(PDF) 이메일 — 담당자 이메일과는 별개로 자동 발송됨 ----
+  let customerOk = false;
+  if(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_CUSTOMER_TEMPLATE_ID && window.emailjs && state.customer.email){
+    try{
+      const pdfDataUri = await generateQuotePdf(id);
+      const pdfUrl = pdfDataUri ? await uploadToCloudinary(pdfDataUri) : null;
+      if(pdfUrl){
+        const customerParams = {
+          to_email: state.customer.email,
+          cc_email: 'ricky@cyhds.com', // EmailJS 템플릿의 CC 필드에 {{cc_email}}로 연결해 두어야 함
+          customer_name: state.customer.name,
+          quote_id: id,
+          pdf_url: pdfUrl,
+        };
+        customerOk = await sendEmailWithRetry(EMAILJS_SERVICE_ID, EMAILJS_CUSTOMER_TEMPLATE_ID, customerParams);
+      }else{
+        console.error('견적서 PDF 업로드 실패 — 고객 이메일을 보내지 못함');
+      }
+    }catch(err){
+      console.error('고객 견적서 이메일 발송 실패', err);
+    }
+  }
+
   // status text updates whenever this finishes — may land after step 4 is already showing, that's fine
   if(!EMAILJS_PUBLIC_KEY || !EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID){
     statusEl.textContent = '접수 내용이 저장됐어요. (이메일 자동발송 설정이 아직 연결되지 않았어요)';
+  }else if(staffOk && customerOk){
+    statusEl.textContent = '담당자와 고객님 이메일로 견적서가 자동 전송됐어요.';
   }else if(staffOk){
-    statusEl.textContent = '담당자에게 자동으로 전송됐어요.';
+    statusEl.textContent = '담당자에게는 전송됐지만, 고객님께 견적서 이메일은 전송하지 못했어요.';
   }else{
     statusEl.textContent = '자동 전송에 실패했어요. 아래 연락처로 문의해 주세요.';
   }
