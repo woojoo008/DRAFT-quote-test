@@ -787,6 +787,10 @@ async function uploadToCloudinary(dataUrl){
       method:'POST', body: fd
     });
     const data = await res.json();
+    if(!res.ok || !data.secure_url){
+      // Cloudinary가 거부한 실제 이유를 그대로 로그에 남김 (원인 파악용)
+      console.error('cloudinary upload rejected:', res.status, data?.error?.message || data);
+    }
     return data.secure_url || null;
   }catch(err){
     console.error('cloudinary upload failed', err);
