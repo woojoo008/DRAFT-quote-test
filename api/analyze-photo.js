@@ -33,40 +33,62 @@ export default async function handler(req, res) {
 반드시 아래 JSON 형식으로만 답하세요. 다른 설명 없이.
 {"matches": true 또는 false, "tier": 정수}`;
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64 } },
-              { text: prompt }
-            ]
-          }],
-          generationConfig: { response_mime_type: 'application/json' }
-        })
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const MAX_ATTEMPTS = 3;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64 } },
+                { text: prompt }
+              ]
+            }],
+            generationConfig: { response_mime_type: 'application/json' }
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      // Gemini 쪽 일시적 과부하(503 UNAVAILABLE)나 429(요청 과다)는 재시도 대상 — 매번 통과 처리로 빠지지 않도록 함
+      const errStatus = data?.error?.status;
+      if (errStatus === 'UNAVAILABLE' || errStatus === 'RESOURCE_EXHAUSTED' || response.status === 503 || response.status === 429) {
+        console.error(`Gemini temporarily unavailable (attempt ${attempt}/${MAX_ATTEMPTS}):`, data?.error?.message || response.status);
+        if (attempt < MAX_ATTEMPTS) {
+          await sleep(600 * attempt); // 0.6s, 1.2s 순으로 살짝 늘려가며 재시도
+          continue;
+        }
+        return res.status(200).json({ tier: 0, matches: true, note: 'Gemini temporarily unavailable, defaulted' });
       }
-    );
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (!text) {
-      // Gemini의 실제 응답을 그대로 로그에 남겨서 원인(키 오류/할당량/안전필터 등)을 확인할 수 있게 함
-      console.error('Gemini returned no usable text. Full response:', JSON.stringify(data));
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!text) {
+        // Gemini의 실제 응답을 그대로 로그에 남겨서 원인(키 오류/할당량/안전필터 등)을 확인할 수 있게 함
+        console.error('Gemini returned no usable text. Full response:', JSON.stringify(data));
+        return res.status(200).json({ tier: 0, matches: true, note: 'analysis failed, defaulted' });
+      }
+      const parsed = JSON.parse(text);
+
+      let tier = parseInt(parsed.tier, 10);
+      if (!Number.isInteger(tier) || tier < -10 || tier > 10) tier = 0;
+      const matches = parsed.matches !== false;
+
+      return res.status(200).json({ tier, matches });
+    } catch (err) {
+      console.error(`Gemini analyze-photo failed (attempt ${attempt}/${MAX_ATTEMPTS}):`, err);
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(600 * attempt);
+        continue;
+      }
+      // 실패 시에도 사용자 흐름이 막히지 않도록 통과 처리
+      return res.status(200).json({ tier: 0, matches: true, note: 'analysis failed, defaulted' });
     }
-    const parsed = JSON.parse(text);
-
-    let tier = parseInt(parsed.tier, 10);
-    if (!Number.isInteger(tier) || tier < -10 || tier > 10) tier = 0;
-    const matches = parsed.matches !== false;
-
-    return res.status(200).json({ tier, matches });
-  } catch (err) {
-    console.error('Gemini analyze-photo failed:', err);
-    // 실패 시에도 사용자 흐름이 막히지 않도록 통과 처리
-    return res.status(200).json({ tier: 0, matches: true, note: 'analysis failed, defaulted' });
   }
 }
