@@ -395,36 +395,37 @@
 
   /* ===== 견적서(PDF) 렌더링용 — 화면에는 보이지 않고 PDF 생성 시 잠깐 그려졌다가 캡처됨 ===== */
   #pdf-render-area{position:fixed;left:0;top:0;width:820px;background:#fff;z-index:-1;overflow:hidden;pointer-events:none;}
-  .pdf-page{width:820px;padding:36px 40px;background:#fff;font-family:'Courier New',monospace;color:#000;box-sizing:border-box;}
+  .pdf-page-frame{width:820px;min-height:1160px;background:#fff;box-sizing:border-box;}
+  .pdf-page{width:820px;padding:50px 50px;background:#fff;font-family:'Courier New',monospace;color:#000;box-sizing:border-box;}
   .pdf-logo{color:#c8471f;font-size:26px;font-weight:bold;letter-spacing:1px;}
   .pdf-company{font-size:15px;font-weight:bold;margin-top:2px;}
   .pdf-addr{font-size:11px;color:#333;margin-top:2px;}
-  .pdf-hr{border-top:2px solid #000;margin:14px 0 22px;}
+  .pdf-hr{border-top:2px solid #000;margin:14px 0 26px;}
   .pdf-title{text-align:center;font-weight:bold;font-size:14px;margin-bottom:6px;}
-  .pdf-meta{text-align:center;font-size:11px;color:#444;margin-bottom:18px;}
+  .pdf-meta{text-align:center;font-size:11px;color:#444;margin-bottom:22px;}
   .pdf-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11.5px;}
   .pdf-table col.c-item{width:33%;}
   .pdf-table col.c-dim{width:9%;}
   .pdf-table col.c-real{width:16%;}
   .pdf-table col.c-qty{width:8%;}
   .pdf-table col.c-load{width:16%;}
-  .pdf-table th, .pdf-table td{border:1px solid #999;padding:6px 4px;text-align:center;word-break:break-word;overflow-wrap:break-word;box-sizing:border-box;}
+  .pdf-table th, .pdf-table td{border:1px solid #999;padding:8px 4px;text-align:center;word-break:break-word;overflow-wrap:break-word;box-sizing:border-box;}
   .pdf-table td.td-left{text-align:left;padding-left:8px;}
   .pdf-table td.bold{font-weight:bold;}
-  .pdf-note{font-size:10.5px;color:#333;text-align:center;margin-top:8px;}
-  .pdf-note.bold{font-weight:bold;background:#fff2a8;padding:4px;}
-  .pdf-totalbox{margin-top:14px;border:1px solid #999;}
+  .pdf-note{font-size:10.5px;color:#333;text-align:right;margin-top:8px;}
+  .pdf-totalbox{margin:24px auto 0;width:52%;border:1px solid #999;}
   .tt-row1{display:flex;border-bottom:1px solid #999;}
-  .tt-row1-label{flex:1;text-align:center;padding:6px;font-size:12px;font-weight:bold;border-right:1px solid #999;}
-  .tt-row1-value{flex:1;text-align:center;padding:6px;font-size:12px;}
-  .tt-row2{display:flex;}
-  .tt-row2-label{width:110px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:#f1ede4;border-right:1px solid #999;text-align:center;padding:6px;}
-  .tt-row2-mid{flex:1;display:flex;flex-direction:column;border-right:1px solid #999;}
-  .tt-cell{flex:1;display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:#fff2a8;border-bottom:1px solid #ddd;font-size:12px;}
+  .tt-row1-label{flex:1;text-align:center;padding:7px;font-size:12px;font-weight:bold;border-right:1px solid #999;}
+  .tt-row1-value{flex:1;text-align:center;padding:7px;font-size:12px;}
+  .tt-row2{display:flex;border-bottom:1px solid #999;}
+  .tt-row2-label{width:26%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;border-right:1px solid #999;text-align:center;padding:7px;}
+  .tt-row2-mid{width:40%;display:flex;flex-direction:column;border-right:1px solid #999;}
+  .tt-cell{flex:1;display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #ddd;font-size:12px;}
   .tt-cell:last-child{border-bottom:none;}
   .tt-cell-sub{color:#555;}
   .tt-cell-amt{font-weight:bold;}
-  .tt-row2-total{width:190px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;background:#fff2a8;}
+  .tt-row2-total{width:34%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;}
+  .tt-clearance{text-align:center;padding:8px;}
   .pdf-footer{margin-top:26px;font-size:10px;color:#555;text-align:left;}
   .pdf-gulim-body, .pdf-gulim-body *{
     font-family:'Noto Sans KR','Gulim','GulimChe',sans-serif !important;
@@ -2456,7 +2457,7 @@ function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
   const totalBoxHtml = contactNeeded ? `
     <div class="pdf-totalbox">
       <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
-      <div style="padding:14px;text-align:center;font-size:12.5px;">담당자 확인 후 정확한 비용을 안내드립니다.</div>
+      <div style="padding:14px;text-align:center;">담당자 확인 후 정확한 비용을 안내드립니다.</div>
     </div>` : `
     <div class="pdf-totalbox">
       <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
@@ -2468,10 +2469,11 @@ function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
         </div>
         <div class="tt-row2-total">$${priced.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       </div>
+      <div class="tt-clearance pdf-clearance">Custom clearance is not included</div>
     </div>`;
 
   return `
-  <div class="pdf-page">
+  <div class="pdf-page-frame"><div class="pdf-page">
     <div class="pdf-logo">현대해운</div>
     <div class="pdf-company">HYUNDAI SHIPPING USA INC.</div>
     <div class="pdf-addr">18300 S. WILMINGTON AVE., UNIT 160, RANCHO DOMINGUEZ, CA 90220</div>
@@ -2500,10 +2502,9 @@ function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
     <div class="pdf-note">Volume estimates use AI analysis based on a large-scale furniture database from Crate &amp; Barrel, Pottery Barn, and RH.</div>
     <div class="pdf-note">This estimate may vary by angle, lighting, distance, and composition; final cost is based on actual volume.</div>
     ${totalBoxHtml}
-    <div class="pdf-note pdf-clearance">Custom clearance is not included</div>
     <div class="pdf-footer">18300 S. WILMINGTON AVE. UNIT 160, RANCHO DOMINGUEZ, CA 90220 *TEL: 310-763-7770, FAX: 310-763-7772</div>
     </div>
-  </div>`;
+  </div></div>`;
 }
 
 async function renderPdfPageToCanvas(html){
@@ -2639,7 +2640,7 @@ async function submitQuote(id){
     const assemblyTxt = entries.some(e=>e.assembly) ? entries.map(e=>e.assembly?`(${e.assembly})`:'').join(' ') : '';
     const mismatchTxt = entries.some(e=>e.mismatchFlag) ? ' ⚠️사진확인필요' : '';
     const tierVals = entries.map(e=>tierPct(e.sizeTier));
-    const tierTxt = tierVals.some(p=>p!==0) ? ` 🔍AI크기판정:${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')}` : '';
+    const tierTxt = ` 🔍AI크기판정:${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')}`;
     const noteTxt = assemblyTxt + mismatchTxt + tierTxt;
     return `<tr>
       <td style="padding:6px 8px;font-size:13px;text-align:center;">${photoTag}</td>
