@@ -2554,12 +2554,17 @@ async function generateQuotePdf(quoteId){
     const { jsPDF } = window.jspdf;
     const canvas1 = await renderPdfPageToCanvas(pdfPageHtml(photoRows, priced1, quoteId, dateStr, contactNeeded));
     const h1 = 820 * canvas1.height / canvas1.width;
-    const doc = new jsPDF({unit:'px', format:[820, h1], hotfixes:['px_scaling']});
+    // jsPDF는 orientation을 안 정해주면 "세로가 더 길어야 정상"이라고 판단해서
+    // 가로/세로 값을 멋대로 바꿔치기함 — 그래서 항목이 적어 표가 짧을 때(h < 820)
+    // 페이지가 90도 돌아간 것처럼 잘려 보이던 버그였음. 실제 모양에 맞춰 명시적으로 지정해서 방지.
+    const orient1 = h1 >= 820 ? 'p' : 'l';
+    const doc = new jsPDF({unit:'px', format:[820, h1], orientation: orient1, hotfixes:['px_scaling']});
     doc.addImage(canvas1.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h1);
 
     const canvas2 = await renderPdfPageToCanvas(pdfPageHtml(combinedRows, priced2, quoteId, dateStr, contactNeeded));
     const h2 = 820 * canvas2.height / canvas2.width;
-    doc.addPage([820, h2]);
+    const orient2 = h2 >= 820 ? 'p' : 'l';
+    doc.addPage([820, h2], orient2);
     doc.addImage(canvas2.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h2);
 
     const blob = doc.output('blob');
