@@ -394,7 +394,7 @@
   .assembly-tag.x{background:#fdf1ef;color:var(--danger);}
 
   /* ===== 견적서(PDF) 렌더링용 — 화면에는 보이지 않고 PDF 생성 시 잠깐 그려졌다가 캡처됨 ===== */
-  #pdf-render-area{position:fixed;left:-99999px;top:0;width:820px;background:#fff;z-index:-1;}
+  #pdf-render-area{position:fixed;left:0;top:0;width:820px;background:#fff;z-index:-1;overflow:hidden;pointer-events:none;}
   .pdf-page{width:820px;padding:36px 40px;background:#fff;font-family:'Courier New',monospace;color:#000;box-sizing:border-box;}
   .pdf-logo{color:#c8471f;font-size:26px;font-weight:bold;letter-spacing:1px;}
   .pdf-company{font-size:15px;font-weight:bold;margin-top:2px;}
@@ -2525,7 +2525,7 @@ async function renderPdfPageToCanvas(html){
   await new Promise(r=>setTimeout(r, 30)); // 레이아웃이 자리잡을 시간을 아주 잠깐 더 줌
   const canvas = await html2canvas(area.firstElementChild, {
     scale:2, backgroundColor:'#ffffff',
-    windowWidth:820, width:820, // 폰처럼 화면이 좁아도 항상 820px 폭 기준으로 캡처 (안 하면 화면 너비만큼 잘려서 찍힘)
+    windowWidth:820, // 폰처럼 화면이 좁아도 항상 820px 폭 기준으로 레이아웃/캡처
   });
   area.innerHTML = '';
   return canvas;
