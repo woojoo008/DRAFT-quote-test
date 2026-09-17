@@ -197,6 +197,8 @@
   }
 
   .banner{background:#fdf3f2;border:1px solid #f2c9c2;color:var(--danger);font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:16px;display:none;}
+  .global-toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-140%);width:calc(100% - 32px);max-width:448px;background:#fff8e6;border:1px solid #f0d78c;color:#7a5a00;font-size:13px;line-height:1.6;text-align:center;padding:12px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:300;transition:transform .25s ease;}
+  .global-toast.show{transform:translateX(-50%) translateY(0);}
   .banner.show{display:block;}
 
   /* item grid (legacy, unused after section redesign but kept for safety) */
@@ -679,6 +681,7 @@
   </div>
 
   <div id="pdf-render-area"></div>
+  <div class="global-toast" id="global-toast"></div>
 
   <div class="cal-overlay" id="cal-overlay">
     <div class="cal-popup" id="cal-popup">
@@ -2109,6 +2112,15 @@ document.getElementById('camera-shutter').addEventListener('click', ()=>{
   }, 'image/jpeg', 0.92);
 });
 
+let toastTimer = null;
+function showToast(html, durationMs=8000){
+  const el = document.getElementById('global-toast');
+  el.innerHTML = html;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), durationMs);
+}
+
 async function handleCapturedPhoto(file){
   if(!file) return;
 
@@ -2137,7 +2149,10 @@ async function handleCapturedPhoto(file){
   try{
     const dataUrl = await resizeImage(file, 700, 0.6);
     const cloudUrl = await uploadToCloudinary(dataUrl);
-    const {tier, matches} = await analyzePhoto(cat, dataUrl);
+    const {tier, matches, quotaIssue} = await analyzePhoto(cat, dataUrl);
+    if(quotaIssue){
+      showToast('<a href="sms:3196600001" style="color:#7a5a00;text-decoration:none;display:block;">현재 이용자가 많아 AI 사진 확인이 어려우니, 문자 주시기 바랍니다.<br><b style="text-decoration:underline;">TEXT : 319-660-0001</b></a>');
+    }
     entry = {catId:cat.id, label:cat.label, cbm:cat.cbm, photo:dataUrl, cloudUrl, sizeTier:tier, mismatchFlag:!matches};
   }catch(err){
     console.error(err);
@@ -2291,10 +2306,10 @@ async function analyzePhoto(cat, dataUrl){
     let tier = parseInt(parsed.tier);
     if(!Number.isInteger(tier) || tier<-10 || tier>10) tier = 0;
     const matches = parsed.matches !== false; // 응답이 애매하면 기본은 true(통과)로 처리
-    return {tier, matches};
+    return {tier, matches, quotaIssue: !!parsed.quotaIssue};
   }catch(err){
     console.error('photo analysis failed (server) — treating as matches / tier 0', err);
-    return {tier: 0, matches: true};
+    return {tier: 0, matches: true, quotaIssue: false};
   }
 }
 
