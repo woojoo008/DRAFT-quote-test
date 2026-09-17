@@ -1410,7 +1410,7 @@ function computeTotalCbm(){
 function additionalCbmCost(totalCbm){
   if(totalCbm <= 3) return 0;
   const extra = totalCbm - 3;
-  const rate = totalCbm < 7 ? 350 : 300; // 7 CBM 미만이면 추가 1 CBM당 $350, 7 이상이면 $300
+  const rate = totalCbm < 4 ? 350 : 300; // 4 CBM 미만이면 추가 1 CBM당 $350, 4 이상이면 $300
   return extra * rate;
 }
 
@@ -1435,7 +1435,7 @@ async function getPricingContext(){
 function priceForVolume(totalCbm, ctx){
   const combinedBase = BASE_PRICE_3CBM + ctx.matchedCity.add + ctx.destRate + ctx.resSurcharge;
   const cbmCost = additionalCbmCost(totalCbm);
-  return {combinedBase, cbmCost, total: combinedBase + cbmCost, extraRate: totalCbm < 7 ? 350 : 300};
+  return {combinedBase, cbmCost, total: combinedBase + cbmCost, extraRate: totalCbm < 4 ? 350 : 300};
 }
 
 async function calculateEstimate(){
@@ -2523,7 +2523,10 @@ async function renderPdfPageToCanvas(html){
     console.error('web font load check failed, proceeding anyway', err);
   }
   await new Promise(r=>setTimeout(r, 30)); // 레이아웃이 자리잡을 시간을 아주 잠깐 더 줌
-  const canvas = await html2canvas(area.firstElementChild, {scale:2, backgroundColor:'#ffffff'});
+  const canvas = await html2canvas(area.firstElementChild, {
+    scale:2, backgroundColor:'#ffffff',
+    windowWidth:820, width:820, // 폰처럼 화면이 좁아도 항상 820px 폭 기준으로 캡처 (안 하면 화면 너비만큼 잘려서 찍힘)
+  });
   area.innerHTML = '';
   return canvas;
 }
