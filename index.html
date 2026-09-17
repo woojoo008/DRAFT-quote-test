@@ -1,94 +1,2755 @@
-// /api/analyze-photo.js
-// Vercel Serverless Function — Gemini API 키를 서버 환경변수에서만 읽고,
-// 브라우저에는 절대 노출하지 않습니다.
-//
-// 설정 방법:
-// 1) Vercel 대시보드 → 프로젝트 → Settings → Environment Variables
-// 2) Key: GEMINI_API_KEY, Value: (Google AI Studio에서 발급받은 키) 등록 → Save
-// 3) Production/Preview 둘 다 체크한 뒤 재배포(Redeploy)
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>현대해운 - 이사화물 견적</title>
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+<!-- 카카오톡/문자 등에 링크 공유 시 미리보기 카드용 -->
+<meta property="og:type" content="website">
+
+<!-- PWA: 홈 화면에 추가 지원 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#152341">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="현대해운 견적">
+<meta property="og:title" content="AI 귀국이사&타주이사 견적">
+<meta property="og:description" content="사진 촬영만으로 간편하게 이사화물 견적을 신청하세요.">
+<meta property="og:image" content="https://res.cloudinary.com/sbzwquxg/image/upload/v1787939350/og_banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://hyundai-shipping-quote.vercel.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AI 귀국이사&타주이사 견적">
+<meta name="twitter:description" content="사진 촬영만으로 간편하게 이사화물 견적을 신청하세요.">
+<meta name="twitter:image" content="https://res.cloudinary.com/sbzwquxg/image/upload/v1787939350/og_banner.png">
+<style>
+  :root{
+    --navy:#152341;
+    --navy-2:#223458;
+    --orange:#e8622c;
+    --orange-dark:#c74f1f;
+    --cream:#faf6ef;
+    --paper:#ffffff;
+    --ink:#1c1f26;
+    --muted:#767a85;
+    --line:#e4ddd0;
+    --danger:#c0392b;
+    --success:#2f8f5b;
+    --yellow:#ffd23f;
+    --radius:14px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;overflow-x:hidden;width:100%;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .app{max-width:480px;width:100%;margin:0 auto;min-height:100vh;background:var(--cream);display:flex;flex-direction:column;overflow-x:hidden;}
+
+  /* Header / brand */
+  .install-banner{
+    display:none;align-items:center;gap:10px;
+    background:var(--orange);color:#fff;padding:10px 14px;
+  }
+  .install-banner.show{display:flex;}
+  .install-banner-text{flex:1;min-width:0;}
+  .install-banner-title{font-size:12.5px;font-weight:700;}
+  .install-banner-sub{font-size:11px;color:rgba(255,255,255,.85);margin-top:1px;}
+  .install-banner-btn{
+    flex-shrink:0;background:#fff;color:var(--orange-dark);border:none;border-radius:8px;
+    padding:8px 12px;font-size:12.5px;font-weight:800;cursor:pointer;
+  }
+  .install-banner-close{
+    flex-shrink:0;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;
+    padding:0 2px;line-height:1;opacity:.85;
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  const { base64, mimeType, catLabel, dimText } = req.body || {};
-
-  if (!GEMINI_API_KEY) {
-    // 서버에 키가 아직 등록되지 않은 경우: 판단 없이 통과 처리 (기존 클라이언트 동작과 동일)
-    return res.status(200).json({ tier: 0, matches: true, note: 'GEMINI_API_KEY not set on server' });
+  .brand{
+    background:var(--navy);
+    color:#fff;
+    padding:20px 20px 16px;
+    position:relative;
+    overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;
   }
-  if (!base64 || !catLabel) {
-    return res.status(400).json({ error: 'Missing base64 or catLabel' });
+  .brand-text{min-width:0;}
+  .brand-logo-badge{
+    flex-shrink:0;background:#fff;border-radius:12px;padding:9px 14px;
+    display:flex;align-items:center;justify-content:center;position:relative;z-index:1;margin-bottom:8px;
+    text-decoration:none;cursor:pointer;
+  }
+  .brand-logo-badge img{display:block;height:52px;width:auto;}
+  .brand::after{
+    content:"";
+    position:absolute; right:-30px; top:-30px;
+    width:140px;height:140px;border-radius:50%;
+    background:radial-gradient(circle,rgba(232,98,44,.35),transparent 70%);
+  }
+  .brand-name{font-size:13px;letter-spacing:.14em;color:#f0b48f;font-weight:600;text-transform:uppercase;}
+  .brand-title{
+    font-family:"Malgun Gothic","맑은 고딕",-apple-system,"Apple SD Gothic Neo",sans-serif;
+    font-size:19px;font-weight:700;margin-top:2px;letter-spacing:-.01em;
+  }
+  .brand-manager{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;text-decoration:none;display:inline-block;}
+  .steps{display:flex;gap:6px;padding:14px 20px 0;background:var(--navy);}
+  .step-dot{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .step-dot.clickable{cursor:pointer;}
+  .step-dot.clickable:active{opacity:.7;}
+  .step-dot .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.22);overflow:hidden;}
+  .step-dot .bar span{display:block;height:100%;width:0%;background:var(--orange);transition:width .35s ease;}
+  .step-dot.done .bar span{width:100%;}
+  .step-dot.active .bar span{width:100%;}
+  .step-dot label{font-size:10.5px;color:rgba(255,255,255,.65);letter-spacing:.02em;}
+  .step-dot.active label{color:#fff;font-weight:600;}
+  .steps-pad{height:16px;background:var(--navy);}
+
+  /* Content */
+  .screen{flex:1;padding:22px 20px 100px;display:none;}
+  #screen-3{padding-bottom:170px;} /* bar-3에 버튼이 2개(견적신청+다시촬영)라 기본 100px보다 더 필요함 */
+  .screen.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .eyebrow{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--orange-dark);font-weight:700;margin-bottom:6px;}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:24px;margin:0 0 6px;color:var(--navy);letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:22px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--navy-2);margin-bottom:6px;}
+  .field input, .field select{
+    width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:15.5px;background:var(--paper);color:var(--ink);
+    scroll-margin-top:90px;scroll-margin-bottom:130px;
+  }
+  .field select{appearance:none;-webkit-appearance:none;font-size:15.5px; /* 다른 입력칸 placeholder(예:90220)와 동일한 크기로 맞춤 */
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23767a85' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-right:38px;}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--navy-2);}
+  .field.error input, .field.error select{border-color:var(--danger);background:#fdf3f2;}
+  .field.error .date-display{border-color:var(--danger);background:#fdf3f2;}
+
+  .date-display{
+    width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:15.5px;background:var(--paper);color:var(--ink);font-family:inherit;
+    display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-sizing:border-box;
+  }
+  .date-display.placeholder{color:#9a958a;}
+  .date-display:focus{outline:none;border-color:var(--navy-2);}
+  .date-cal-icon{width:19px;height:19px;color:var(--muted);flex-shrink:0;}
+
+  .cal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(20,18,12,.45);
+    align-items:flex-end;justify-content:center;z-index:60;
+  }
+  .cal-overlay.show{display:flex;}
+  .cal-popup{
+    background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:480px;
+    padding:18px 18px 22px;font-family:inherit;
+  }
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-month-label{font-size:15.5px;font-weight:700;color:var(--navy);}
+  .cal-nav{
+    width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:#fff;
+    font-size:18px;color:var(--navy-2);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .cal-nav:disabled{opacity:.3;cursor:default;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11.5px;color:var(--muted);margin-bottom:4px;}
+  .cal-weekdays span:first-child, .cal-weekdays span:last-child{color:var(--danger);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;transition:transform .18s ease-out, opacity .18s ease-out;}
+  .cal-grid.slide-out-left{transform:translateX(-24px);opacity:0;}
+  .cal-grid.slide-out-right{transform:translateX(24px);opacity:0;}
+  .cal-grid.slide-prep{transition:none !important;}
+  .cal-day{
+    aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:var(--ink);border-radius:50%;cursor:pointer;border:none;background:none;font-family:inherit;
+  }
+  .cal-day:hover:not(:disabled):not(.empty){background:#f1ede4;}
+  .cal-day.selected{background:var(--orange);color:#fff;font-weight:700;}
+  .cal-day.today:not(.selected){border:1.5px solid var(--orange);}
+  .cal-day.weekend{color:var(--danger);}
+  .cal-day:disabled{color:#cfc9ba;cursor:default;}
+  .cal-day.empty{cursor:default;}
+  .cal-close{
+    width:100%;margin-top:14px;padding:12px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:var(--navy-2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .err-msg{display:none;color:var(--danger);font-size:12.5px;margin-top:5px;}
+  .field.error .err-msg{display:block;}
+
+  .btn{
+    display:block;width:100%;text-align:center;padding:15px 18px;border-radius:11px;
+    font-size:15.5px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em;
+  }
+  .btn-yellow{background:var(--yellow);color:#3a2c00;box-shadow:0 3px 0 #d9ac1f;}
+  .btn-yellow:active{transform:translateY(2px);box-shadow:none;}
+  .btn-ghost{background:transparent;color:var(--navy-2);border:1.5px solid var(--line);margin-top:10px;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .bottom-bar{
+    position:fixed;bottom:0;left:0;right:0;
+    max-width:480px;margin:0 auto;background:linear-gradient(180deg,rgba(250,246,239,0),var(--cream) 30%);
+    padding:18px 20px 20px;transition:transform .15s ease-out;
   }
 
-  const prompt = `고객이 "${catLabel}" 항목을 선택하고 사진을 찍었습니다.
+  .banner{background:#fdf3f2;border:1px solid #f2c9c2;color:var(--danger);font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:16px;display:none;}
+  .banner.show{display:block;}
 
-1. 먼저, 사진 속 물건이 실제로 "${catLabel}"이 맞는지 확인하세요. 완전히 다른 종류의 물건(예: 침대를 선택했는데 협탁 사진, 소파인데 의자 사진 등)이면 matches를 false로 하세요. 같은 대분류(가구 종류)면 다소 애매해도 matches는 true로 하세요.
-2. matches가 true인 경우에만, 사진 속 물건의 크기를 일반적인 기준 크기와 비교해 주세요. ${dimText || ''}
--10(매우 작음) ~ 0(기준과 비슷함) ~ +10(매우 큼) 사이의 정수로 판단하세요. 기준보다 크면 양수, 작으면 음수, 비슷하면 0입니다.
+  /* item grid (legacy, unused after section redesign but kept for safety) */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
-반드시 아래 JSON 형식으로만 답하세요. 다른 설명 없이.
-{"matches": true 또는 false, "tier": 정수}`;
+  .cap-note{font-size:12.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.5;}
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const MAX_ATTEMPTS = 3;
+  .search-wrap{margin-bottom:14px;}
+  .search-wrap input{
+    width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:14.5px;background:#fff;
+  }
+  .search-wrap input:focus{outline:none;border-color:var(--navy-2);}
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { inline_data: { mime_type: mimeType || 'image/jpeg', data: base64 } },
-                { text: prompt }
-              ]
-            }],
-            generationConfig: { response_mime_type: 'application/json' }
-          })
-        }
-      );
+  .sec-tabs{display:flex;justify-content:space-between;gap:4px;overflow-x:hidden;margin-bottom:16px;padding-bottom:2px;}
+  .sec-tab{
+    flex:1 1 auto;min-width:0;padding:12px 6px;border-radius:9px;border:2px solid #1c1f26;
+    background:#fff;color:#1c1f26;font-size:12.5px;font-weight:900;white-space:nowrap;cursor:pointer;
+    text-align:center;letter-spacing:-.03em;
+  }
+  .sec-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
-      const data = await response.json();
+  .item-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .custom-section{display:flex;flex-direction:column;gap:16px;grid-column:1 / -1;width:100%;}
+  .add-slot-card{border-style:dashed;justify-content:center;}
+  .add-slot-plus{font-size:30px;font-weight:800;color:var(--orange-dark);}
+  .custom-note{
+    width:100%;min-height:165px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);
+    font-size:14px;color:var(--ink);background:#fff;resize:vertical;font-family:inherit;line-height:1.5;
+    box-sizing:border-box;display:block;
+  }
+  .custom-note:focus{outline:none;border-color:var(--navy-2);}
+  .item-card{
+    background:#fff;border-radius:16px;border:1px solid #edeae1;
+    box-shadow:0 1px 2px rgba(20,20,20,.04);
+    padding:14px 8px 12px;display:flex;flex-direction:column;align-items:center;
+    text-align:center;cursor:pointer;position:relative;min-height:106px;justify-content:center;gap:8px;
+    min-width:0;box-sizing:border-box;
+  }
+  .item-card.qty-card{min-height:132px;cursor:default;}
+  .item-card:active{transform:scale(.97);}
+  .item-card .icon{font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .item-card .icon img{width:44px;height:44px;border-radius:10px;object-fit:cover;}
+  .item-card .icon svg.licon{color:#2b2f38;flex-shrink:0;}
+  .item-card .lbl{font-size:11.5px;font-weight:700;color:var(--ink);line-height:1.3;word-break:keep-all;}
+  .item-card .qty{
+    position:absolute;top:7px;right:7px;background:var(--orange);color:#fff;
+    font-size:10px;font-weight:800;border-radius:20px;min-width:18px;height:18px;
+    display:flex;align-items:center;justify-content:center;padding:0 5px;
+  }
 
-      // Gemini 쪽 일시적 과부하(503 UNAVAILABLE)나 429(요청 과다)는 재시도 대상 — 매번 통과 처리로 빠지지 않도록 함
-      const errStatus = data?.error?.status;
-      if (errStatus === 'UNAVAILABLE' || errStatus === 'RESOURCE_EXHAUSTED' || response.status === 503 || response.status === 429) {
-        console.error(`Gemini temporarily unavailable (attempt ${attempt}/${MAX_ATTEMPTS}):`, data?.error?.message || response.status);
-        if (attempt < MAX_ATTEMPTS) {
-          await sleep(600 * attempt); // 0.6s, 1.2s 순으로 살짝 늘려가며 재시도
-          continue;
-        }
-        return res.status(200).json({ tier: 0, matches: true, note: 'Gemini temporarily unavailable, defaulted' });
-      }
+  /* quantity-mode cards */
+  .item-card.qty-card{padding:14px 8px 10px;gap:6px;}
+  .item-card.qty-card.active{border-color:var(--orange);background:#fffaf3;}
+  .item-card.qty-card .icon svg.licon{color:#a39c8a;}
+  .item-card.qty-card.active .icon svg.licon{color:var(--orange-dark);}
+  .qty-stepper{
+    display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;
+    background:#f4f1e9;border-radius:20px;padding:4px 6px;width:100%;box-sizing:border-box;min-width:0;
+  }
+  .qty-stepper .step{
+    width:24px;height:24px;border-radius:50%;border:none;background:#fff;
+    box-shadow:0 1px 2px rgba(20,20,20,.12);
+    font-size:16px;font-weight:800;color:var(--navy-2);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;padding:0;line-height:1;flex-shrink:0;
+  }
+  .qty-stepper .step.plus{color:var(--orange-dark);}
 
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (!text) {
-        // Gemini의 실제 응답을 그대로 로그에 남겨서 원인(키 오류/할당량/안전필터 등)을 확인할 수 있게 함
-        console.error('Gemini returned no usable text. Full response:', JSON.stringify(data));
-        return res.status(200).json({ tier: 0, matches: true, note: 'analysis failed, defaulted' });
-      }
-      const parsed = JSON.parse(text);
+  .photo-delete{
+    position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;
+    background:#fff;border:1.5px solid var(--line);color:var(--danger);font-size:13px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;padding:0;line-height:1;cursor:pointer;z-index:2;
+  }
 
-      let tier = parseInt(parsed.tier, 10);
-      if (!Number.isInteger(tier) || tier < -10 || tier > 10) tier = 0;
-      const matches = parsed.matches !== false;
+  .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;}
+  .spinner{animation:spin-slow 3s linear infinite;}
+  @keyframes spin-slow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .spinner .ray{
+    transform-box:fill-box;transform-origin:center;
+    animation:ray-twinkle 1.2s ease-in-out infinite;
+  }
+  @keyframes ray-twinkle{
+    0%,100%{transform:scaleY(0.55);opacity:.5;}
+    50%{transform:scaleY(1);opacity:1;}
+  }
+  .loading-title{font-family:Georgia,"Times New Roman",serif;font-size:18px;color:var(--navy);margin-top:20px;}
+  .loading-sub{font-size:13px;color:var(--muted);margin-top:6px;}
+  .qty-stepper .step:disabled{opacity:.35;cursor:default;box-shadow:none;}
+  .qty-stepper .num{font-size:15px;font-weight:800;color:var(--ink);min-width:16px;text-align:center;}
+  .empty-hint{text-align:center;color:var(--muted);font-size:13px;padding:24px 10px;}
+  .sticky-count{
+    position:sticky;top:0;z-index:5;background:var(--cream);padding:2px 0 10px;
+    display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--navy-2);
+  }
+  .sticky-count b{color:var(--orange-dark);}
 
-      return res.status(200).json({ tier, matches });
-    } catch (err) {
-      console.error(`Gemini analyze-photo failed (attempt ${attempt}/${MAX_ATTEMPTS}):`, err);
-      if (attempt < MAX_ATTEMPTS) {
-        await sleep(600 * attempt);
-        continue;
-      }
-      // 실패 시에도 사용자 흐름이 막히지 않도록 통과 처리
-      return res.status(200).json({ tier: 0, matches: true, note: 'analysis failed, defaulted' });
+  /* review list */
+  .rev-card{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px;}
+  .rev-card h3{margin:0 0 10px;font-size:13px;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;}
+  .rev-custom-photos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .rev-custom-photos img{width:64px;height:64px;border-radius:8px;object-fit:cover;}
+  .rev-custom-note{font-size:13.5px;color:var(--ink);line-height:1.5;white-space:pre-wrap;}
+
+  .estimate-loading{font-size:13.5px;color:var(--muted);padding:8px 0;}
+  .estimate-total{font-family:Georgia,serif;font-size:30px;font-weight:700;color:var(--orange-dark);}
+  .estimate-sub{font-size:12px;color:var(--muted);margin-top:4px;margin-bottom:12px;}
+  .estimate-breakdown{border-top:1px dashed var(--line);padding-top:10px;}
+  .estimate-breakdown .er{display:flex;justify-content:space-between;font-size:12.5px;color:var(--navy-2);padding:3px 0;}
+  .estimate-disclaimer{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5;}
+  .estimate-contact{font-size:13.5px;color:var(--ink);line-height:1.6;}
+.agree-row{display:flex;gap:10px;align-items:flex-start;cursor:pointer;}
+.agree-row input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--orange);cursor:pointer;}
+.agree-text{font-size:12.5px;color:var(--navy-2);line-height:1.65;}
+.agree-text p{margin:0 0 8px 0;}
+.agree-text p:last-child{margin-bottom:0;}
+#agree-err{display:none;margin-top:10px;}
+#agree-err.show{display:block;}
+  .rev-row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line);}
+  .rev-row:last-child{border-bottom:none;}
+  .rev-row .k{color:var(--muted);}
+  .rev-row .v{font-weight:600;color:var(--ink);text-align:right;}
+
+  .item-row{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);}
+  .item-row:last-child{border-bottom:none;}
+  .item-row img{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#f1ede4;flex-shrink:0;}
+  .rev-icon-wrap{width:44px;height:44px;border-radius:8px;background:#f1ede4;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .rev-icon-wrap svg.licon{width:24px;height:24px;color:#5c5747;}
+  .item-row .info{flex:1;}
+  .item-row .info .n{font-size:13.5px;font-weight:600;}
+  .item-row .info .m{font-size:12px;color:var(--muted);}
+  .item-row .cuft{font-size:13px;font-weight:700;color:var(--orange-dark);white-space:nowrap;text-align:right;}
+  .item-row .cuft.qty-col{color:var(--navy-2);font-size:14px;}
+
+
+  /* confirmation */
+  .submit-notice{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin-top:14px;font-size:12.5px;color:var(--navy-2);line-height:1.6;
+  }
+  .submit-notice div + div{margin-top:6px;}
+
+  .stamp-wrap{display:flex;justify-content:center;margin:6px 0 26px;}
+  .stamp{
+    width:150px;height:150px;border-radius:50%;
+    border:3px dashed var(--orange);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    transform:rotate(-8deg);color:var(--orange-dark);text-align:center;
+  }
+  .stamp .t1{font-size:11px;letter-spacing:.14em;font-weight:700;}
+  .stamp .t2{font-family:Georgia,serif;font-size:20px;font-weight:700;margin:4px 0;}
+  .stamp .t3{font-size:9.5px;letter-spacing:.08em;font-family:'SFMono-Regular',Consolas,monospace;}
+
+  .voice{font-size:13.5px;color:var(--navy-2);background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.55;margin-bottom:16px;}
+
+  .contact-card{background:#fff;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px;}
+  .contact-card-title{font-size:13px;color:var(--navy-2);font-weight:600;padding:14px 16px 10px;}
+  .contact-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);text-decoration:none;color:inherit;}
+  .contact-ico{font-size:20px;width:32px;text-align:center;flex-shrink:0;}
+  .contact-body{flex:1;}
+  .contact-body .ck{font-size:11.5px;color:var(--muted);}
+  .contact-body .cv{font-size:14.5px;font-weight:700;color:var(--navy);}
+  .contact-arrow{font-size:20px;color:#c8c2b3;}
+
+  input[type=file]{display:none;}
+  .foot-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,18,12,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .camera-modal{position:fixed;inset:0;background:#000;z-index:200;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .camera-modal.hidden{display:none;}
+  .camera-modal video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .camera-topbar{position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:flex-end;z-index:2;}
+  .camera-close{width:38px;height:38px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:18px;cursor:pointer;}
+  .camera-guide{position:absolute;top:47%;left:50%;transform:translate(-50%,-50%);width:88vw;height:66vh;pointer-events:none;z-index:1;}
+  .cg-corner{position:absolute;width:60px;height:60px;border-color:#fff;border-style:solid;border-width:0;filter:drop-shadow(0 0 3px rgba(0,0,0,.6));}
+  .cg-corner.tl{top:0;left:0;border-top-width:7px;border-left-width:7px;border-radius:12px 0 0 0;}
+  .cg-corner.tr{top:0;right:0;border-top-width:7px;border-right-width:7px;border-radius:0 12px 0 0;}
+  .cg-corner.bl{bottom:0;left:0;border-bottom-width:7px;border-left-width:7px;border-radius:0 0 0 12px;}
+  .cg-corner.br{bottom:0;right:0;border-bottom-width:7px;border-right-width:7px;border-radius:0 0 12px 0;}
+  .camera-hint{position:absolute;bottom:150px;left:20px;right:20px;text-align:center;color:#fff;font-size:14px;line-height:1.5;text-shadow:0 1px 4px rgba(0,0,0,.7);z-index:2;}
+  .camera-bottombar{position:absolute;bottom:28px;left:0;right:0;display:flex;justify-content:center;z-index:2;}
+  .camera-shutter{width:70px;height:70px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;}
+  .camera-shutter:active{background:var(--orange);}
+  .modal-overlay.hidden{display:none;}
+  .modal-card{background:#fff;border-radius:16px;padding:22px 20px;width:100%;max-width:340px;text-align:center;}
+  .modal-title{font-size:15.5px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+  .modal-sub{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+  .modal-btns{display:flex;gap:10px;}
+  .modal-btn{flex:1;padding:13px 8px;border-radius:11px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:700;cursor:pointer;}
+  .modal-btn.o{border-color:var(--success);color:var(--success);}
+  .modal-btn.x{border-color:var(--danger);color:var(--danger);}
+  .assembly-tag{
+    position:absolute;bottom:6px;left:6px;font-size:9.5px;font-weight:800;border-radius:6px;
+    padding:1px 5px;background:#eef7f0;color:var(--success);
+  }
+  .assembly-tag.x{background:#fdf1ef;color:var(--danger);}
+
+  /* ===== 견적서(PDF) 렌더링용 — 화면에는 보이지 않고 PDF 생성 시 잠깐 그려졌다가 캡처됨 ===== */
+  #pdf-render-area{position:fixed;left:-99999px;top:0;width:820px;background:#fff;z-index:-1;}
+  .pdf-page{width:820px;padding:36px 40px;background:#fff;font-family:'Courier New',monospace;color:#000;box-sizing:border-box;}
+  .pdf-logo{color:#c8471f;font-size:26px;font-weight:bold;letter-spacing:1px;}
+  .pdf-company{font-size:15px;font-weight:bold;margin-top:2px;}
+  .pdf-addr{font-size:11px;color:#333;margin-top:2px;}
+  .pdf-hr{border-top:2px solid #000;margin:14px 0 22px;}
+  .pdf-title{text-align:center;font-weight:bold;font-size:14px;margin-bottom:6px;}
+  .pdf-meta{text-align:center;font-size:11px;color:#444;margin-bottom:18px;}
+  .pdf-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11.5px;}
+  .pdf-table col.c-item{width:33%;}
+  .pdf-table col.c-dim{width:9%;}
+  .pdf-table col.c-real{width:16%;}
+  .pdf-table col.c-qty{width:8%;}
+  .pdf-table col.c-load{width:16%;}
+  .pdf-table th, .pdf-table td{border:1px solid #999;padding:6px 4px;text-align:center;word-break:break-word;overflow-wrap:break-word;}
+  .pdf-table td.td-left{text-align:left;padding-left:8px;}
+  .pdf-table td.bold{font-weight:bold;}
+  .pdf-note{font-size:10.5px;color:#333;text-align:center;margin-top:8px;}
+  .pdf-note.bold{font-weight:bold;background:#fff2a8;padding:4px;}
+  .pdf-totalbox{margin-top:14px;border:1px solid #999;}
+  .tt-row1{display:flex;border-bottom:1px solid #999;}
+  .tt-row1-label{flex:1;text-align:center;padding:6px;font-size:12px;font-weight:bold;border-right:1px solid #999;}
+  .tt-row1-value{flex:1;text-align:center;padding:6px;font-size:12px;}
+  .tt-row2{display:flex;}
+  .tt-row2-label{width:110px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:#f1ede4;border-right:1px solid #999;text-align:center;padding:6px;}
+  .tt-row2-mid{flex:1;display:flex;flex-direction:column;border-right:1px solid #999;}
+  .tt-cell{flex:1;display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:#fff2a8;border-bottom:1px solid #ddd;font-size:12px;}
+  .tt-cell:last-child{border-bottom:none;}
+  .tt-cell-sub{color:#555;}
+  .tt-cell-amt{font-weight:bold;}
+  .tt-row2-total{width:190px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;background:#fff2a8;}
+  .pdf-footer{margin-top:26px;font-size:10px;color:#555;text-align:left;}
+  .pdf-gulim-body, .pdf-gulim-body *{
+    font-family:'Noto Sans KR','Gulim','GulimChe',sans-serif !important;
+    font-size:11px !important;
+    font-weight:normal !important;
+  }
+  .pdf-gulim-body .pdf-clearance{
+    font-size:8px !important;
+    font-weight:bold !important;
+  }
+</style>
+</head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<body>
+<div class="app">
+
+  <div class="install-banner" id="install-banner">
+    <div class="install-banner-text">
+      <div class="install-banner-title">앱처럼 설치해서 더 빠르게 이용하세요</div>
+      <div class="install-banner-sub">홈 화면에 추가하면 아이콘 한 번으로 바로 열려요</div>
+    </div>
+    <button class="install-banner-btn" id="install-banner-btn">설치하기</button>
+    <button class="install-banner-close" id="install-banner-close" aria-label="닫기">×</button>
+  </div>
+
+  <div class="brand">
+    <a class="brand-logo-badge" href="https://www.cyhds.com" target="_blank" rel="noopener"><img src="data:image/png;base64,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f/7554MgIKIpU6ZceumlURTdcsstblG5Pn/sYx876qij0hvTPj/88MOrV6+21pZKpX/5l39pbm5etmzZvHnzuru7mbm8pHtcHMeTJ08eOnToiBEjJk2a1NjY2FdWub9PP/30n//8Z/e1VCrNnDnzggsuaGjonUS+ZcuWP/7xj7t371bVUaNGXXLJJQMHDuxVZufOncuWLVu3bt26devSTjHzqFGjTjnllKlTpwKw1t5yyy2OY1T1pptuSj+Xt2rp0qXz5s0rlUqqOnz48NmzZzc1NbW1td155527du0yxnR3d1933XVjx44F8MADD6xcudINrEjyFhxmtzDGjx8/ceLEadOmNTQ05PP5xx9/fNGiRW5hq6qIOFHlCk+YMGHcuHEzZszI5XKlUmnx4sUPP/xwJpPJZDLHHnvseeedB2D37t3/9V//5RaAWyoXXXTRlClTyu0iIrLW3nPPPevXr3eDk/Y0pfb29rfeemvbtm0bN27csmWLW8zudhEZP358U1PTEUccMWXKlEwm4+rskR1ahe6444508oYOHbp48eL0Jzc0ji699NK0Hddcc82jjz764Q9/OL1y7rnnrlmzprzaJUuWnHLKKWmBj370oy+++OLf/d3fua+NjY2//OUvez1CVdvb26+++ur0rjPPPFNVOzs7e/HNrFmz3OPS292Hs88+Oy3z9ttvq+pPfvKTsFKmQC86+eSTf/zjH69Zs8Za27f7y5YtK+8LgLFjxz700ENpGRFxHxYsWNDa6o80POyww9auXdurtk2bNt1www3Dhg2r2IyrrrrKFS4UCuXXoyjq1VNH3/ve99IyEyZM2Lhxo6quWLFi6NCh6fWnn37aFe7Vhb40c+bM3//+96q6c+fOT3ziE7ULz5gx47777nOzc/PNN6fXr7zySve45cuX97rlYx/72I4dO8qnW0RKpdKxxx6blonjOO1joVBYtmzZ9773vRNPPLF2Yz760Y9u2rSpV82qWlXSB0HQ2NjY1dUFoKmpqdxKKVcZbsmm188888zW1tYvfOELixYtAvDEE0/87Gc/+7d/+7dMJgNg165dt91224IFC1z500477Qc/+EFDQ4P7FUBjY6Pjxb4WZPogY0x9fYU3UwN45plnvvCFL/zud79z2k0T4VFXVxcEgdOVTmCEYdjY2NjW1uZ619ramnZQVUulUltbW1dX13PPPffcc89deOGF3/nOd4488sjyZ1lrf/WrX7m+hGHoJP2GDRvuv//+8847L0j2W7kGGGMaGxt37drl+tjL3s3n8/fdd993vvMd17xsNjtkyBBXp4jEcbx3796+I9/rSvlP2Wy2oaHBzV19fX36U7kKSvubDmZjY+PJJ588atSo7u7utWvXbtu2bdeuXd3d3a+99tq3v/3tkSNHHnfcceksZLPZo48+eubMmW1tbW+//fbWrVvdiC1btuyf//mfR4wY8b73vS+d1rq6uvTGcoHtRO8DDzwwbNiw//7v/071m2tw31kmokKh8PDDD1933XXbt29PO9Xc3JzL5cqHolAo5PP5DRs2uEHoNVzVc2/2NYb6UwxAR0fHCSec8I//+I/r1q3bsWOHtfbuu++ePn36Zz7zGQB33nnnrbfe6krOnDnzhhtumDhx4oYNG6pVXo36tie1Z+bMmfPDH/7w61//ei/7sob/9MlPfvKWW24ptyxXrFhxxx133H333Vu2bAHw0EMPjR49+lvf+paT1qnJ9PDDD7vyJ510UhiG8+bNA/DnP//5vvvu++QnP1n+UCdm+n521NXVtXTpUveZmU877bTf/OY3gwcPdldWrVq1adOm/Q5INbe44oeKE9ra2nrTTTel4rO7u/uKK66477773IAsXry4XLI2NDRcddVV11xzjfu6Y8eOr33ta//7v/8LYOvWrY888siJJ57Yi79rNP6OO+444YQTPv3pT9dwSR399re/TR9qjBk6dOgll1zymc98JjWJHa1atWrNmjXt7e3pMLoxcX/7FcFJh0n3JVRZD1deeeWXv/xl9/mdd9756U9/unTp0kcfffSb3/ymuzh69OgvfvGLZ5xxRn+enja6xq8tLS3pEN98882//vWvnUKsdnv54EZR5PytlI444ojvf//73/rWt1I35mc/+9n8+fPTAlu3br3zzjvXrFkDYNy4cTfccMNVV13lpPvbb799//33px5Y38f1JSIq1wwDBgwon6qpU6eefvrpFUegfCJS86Zif3vdhUoAroiUe7T19fXl5laKBKR3lRceMmTIBz/4wV7dqTH+AJjZ+egASqXS5z//+Xvvvbd2yzdv3vyNb3wj/Xr66ae//PLLt9xySy+OBzB16tTzzz//8ssv7+XR7l/Sp+OSz+eXLVvmBiV1FwA0Nzfv2LGj/K60xddee+2WLVt+8pOfAHjppZdmz57d0tLS0dEBoKGh4bOf/exVV11V7dE4QGyLiI466qhLLrnkc5/7nLvyhS98oa6ubvbs2RURp15Nrfbca665ZvHixb/4xS9U1Vr7+uuvX3DBBdlsFsDtt9+eivnLL7/8zDPP3LRp00UXXfSHP/wBwFNPPfXzn//82muvLW9hDbXT2tp65ZVX/uIXvwAQRdFDDz00e/bsn/zkJylPVLwLwMKFC4M++9aDIFi/fr1DimpQ2v3yastl83PPPffiiy+mXwcMGNCrzvLCCxcu/OUvf5k2oNzorUZhGM6aNevUU0/9yle+AiCfz3/uc5+bOnWqgyJQqb+33nqrs0gBDBo06Le//e2QIUP2+6C+VH0TSZnY2Lp16xe/+MUgCMp1hGuW4+O+1NzcfPXVV69YseKpp54CsHLlSjdGxphLL730hhtuqPFcHHj8yxhzxRVXdHV1uRG01n79619///vff/jhh9d4St+LtG/Ic8SIEQ0NDc5j7urqKhaL2Wx2wYIFDz74oJNzp5566mWXXQZg9OjRl1xyyVNPPbVjx46dO3fOmzfv8ssvLwfaamuq448/fv78+VdcccXGjRsLhcI999yzYMGCq6+++sYbb0R1EXDhhReWf03LlMO7/ae6uro//elP99xzz/bt2995551Vq1bt3r3b/XTOOeecffbZDlZOCz/zzDNLly7ds2fPtm3bXnnllRQkPfLIIz/1qU+VSqXaj1PVpqamz3/+8zt27PiP//gPAG1tbZ/61KeeeOIJp2DdGis3xl555ZX089VXX93c3Fxe4bx58373u9+VK+1SqXT66adfdtllvQDofkl6EWlvb69W0mHA2Ff3Oel7/fXXb9++ffny5dZaay2As88++7vf/a6TlxXnMpUfByTsAdTV1V1zzTV79+791re+BWDr1q0XX3zxQw89NGnSpIoM19fGLdeAjjKZTKorrLUO4P/Nb37z8ssvu4tLliy56KKLstksEbW3t6cg+rx5826//favfvWr6UKq3fggCGbNmvXII4/ceuutP/vZz0ql0vr162+55Zb58+d/9atfPffcc1Fp2aRMWYP2O4bl5s3QoUPvvffeF154If21paXl6quvvuqqqyZMmLBz587yNmQymbVr1z755JPplWw2+w//8A+f+9znRo8e3dXVtd9Hi0gul7v22msXL17sPKLXX3/94x//+H333Td48OBym8L9LTdZZ8yY0av+1atX33PPPY7pM5kMMxcKhZaWlosuuqjXc6syfbkuGz58+E033XT44Yf3imI0NTX967/+65w5c9IrveT0Rz7ykRdffDFFqaZPn3799df3hajLb3ciqq/QrT2C7rlNTU1f/OIX58+f/8wzzwBYsWLFFVdcMWfOnF4Qb/ktqLS60isbN25MkZNsNtvY2HjHHXc8+OCDacm9e/emBVIios7Ozscee+yiiy6aMGFCjWaXEzM75/60006744475s6d29bW9tRTT23dunXTpk3XXHNN38UzZ84cY4wDeVIWCcPw3nvv/fWvf+2mf7/rLaVSqTRjxoxJkyYtWbLEYdtDhw6dOnXq1KlTUysiHahSqTRt2rQrrrhi1qxZrnBra+vMmTPHjRuXOkL7fbSrbfTo0d/97nevvPLKpUuXqurzzz//f/7P/7ntttv6mnYOonHjsHr16nJcH8CJJ574ne98p1Qqvfjii3PmzHGaxwUrej23X9ssGhoaPvShD7n4SC9yAY60ZX0xBIcNu4aOHDkyBf60LBiRLrDOzs5Vq1b16iqAMAxt2WuyaxisgwYN+sEPfvD5z39+4cKFAF544YUbb7wxNQT71tyLyhftokWLXnjhhXTIpk2btnbt2rvvvnvnzp0Acrnc7NmzzzzzzBQ7N8Zs3rz597///SuvvAJg4cKFd911Vw1Dru+jiWj06NGf/OQnJ0+ePGPGjB/84AequmLFiu9+97vHHnvscccd16vZ5fGHclq1alXFdV6Ryj3aurq6M844Y9asWW6+GhsbezlF5Wqhubn5wx/+sGuVi0b3J/RRkY455pjvf//711133cqVK1X1D3/4w5AhQ/oaSCeccMIjjzzi2nDPPfdcffXVY8eOTdt/5JFHTpo0KZPJNDQ0PPPMM47pK45DfyHLclOpXDT2gin61mD3fad7X/8pCIIUke3q6lqwYMGWLVvKo78Ali9fPnfu3PTGcgS3r01y7LHH/ud//ueXvvSlV199FcAvf/nLhoaGXuukvAsOsy+vraOj47nnnvvRj360cuVKd/2UU0455phj7rrrrmeffdZdOfHEE7/2ta9Nnjy5V6/z+bxj+q6urscee+wTn/hE3zK9yFqbz+fTNrguHHbYYQ8++OBbb70FYO3atQsWLDjuuON63RjHcbmjlba/WCxW9FNrExG5yeplK6OKMkzBjP0WrkblMvjDH/7wv//7v3/lK19588039+7d++Mf/7ivN3zZZZf96Ec/ckJn1apVN9xww5e//OV0WFzoF8CgQYNqr/mDObPuQL3MlMqd45RaW1s/8IEP/OY3v3FfX3vttW984xvnnnvu4MGDBw4cuHv37o0bNz744INr1qxxU8vMteOCqnrqqafefPPNX/rSl9atW9fV1dUrQtGL3nrrrT/+8Y+DBg1ykaDdu3evXLly7ty5qVU2YcKEG2+8cf369b/97W+d9VVfX//xj3+8Fze7yT777LPvv/9+t96WLFly5513fvvb3649Ynv27PnFL34xZMiQkSNHjho1ysVxX3311XJ5UZ4DU436aQoeEqqNwB5cJRdeeOG2bduuvfbaOI47Ozt7RdxVdeLEiV//+te//e1vOw/zt7/97e7duy+88MJJkyY5zJqICoXCiy++mPrxFY3YWjZ9ql9qiPPyiekl1Msv9nVEUsrlchdccMHTTz/99NNPb9++vaur69e//vVdd901ZcqUMWPGvP3222vXrk1B4vHjx59zzjnlromrMHU20r5dcMEFGzZsuOGGG3q54KljlPZuwYIFy5Ytc3q8VCqVe4dDhw6dPn36F77whWnTpl133XUOmAdw3nnnuUyS8jodnXDCCbNnz3ZM393dff/9919++eVhGKYt7DsIHR0dt99++5tvvjl+/Pjp06e7kX/22WdTw+moo46qkSzQV9eVI+7lI1PukqVtSCe3VCpVsxvTytMpdhkQ1ZrUt3D6OX1u+cWUPvOZzyxduvT222/vmwPn2nD99dd3dHQ8+uijS5YsiaLo0UcfffTRR6dPnz5q1ChmZuadO3euXr06dbSiKDoAm76xsXHs2LHORxk1alQ1c23w4MHNzc2NjY2dnZ2tra191Upzc3NDQ0NLS0s+nx8+fHhfXBnA6NGjf/7zn99xxx0PPfTQ9u3bu7u7oyjavHnzihUrWlpaWltbM5lMc3Nza2vrZZddlgbkiGjIkCEOCBo+fHj50Di69tprV6xY8cgjj6SD29nZ6RrQ0NAwduzYtrY2lyxlrXVTGATB6NGjXTbEiBEjTj/99E9/+tPDhg27++67169fP2zYMGbOZDIXX3zxuHHjes0HkiV3yimnzJo1y2VxdXZ2PvDAAxdffPGYMWMcu48cObLXIDQ2Np555plOtj322GMudyqbzQ4ePLipqWnUqFFf/epXU1/IjWG5I9SXXKKYS/8cNWqUW8+ZTGbMmDFRFAVB0NbWlqqOYcOGuSyMMWPG1NYnzDx48OCWlpZcLtfa2jpgwABUN2aIqLm5ecCAAQ0NDfX19WnqkTMmBwwYkMlkXAyuvIZMJvPjH/+4vb19/vz55The+fDedNNN55133v/8z/8sX7589+7dXV1dq1atev3118vHc8SIEW6mDjvssL6JLVXRtLVr17700kudnZ1E1NTUdMYZZ6TtLm/BggULli9fnslknO//vve9z3FhSsuXL3/mmWdcTuW4ceNmzZpVLXPG0aJFi9asWVMoFFwix8yZM+vr6zOZzMknnzxx4sTyp1tr77jjDgdfjBw50uF6vZoH4M4770yzYUul0uzZsxsbG1etWrVo0aJUCZZzbS6XmzJlytChQ8ePH5/WNnfu3NWrV7teHHbYYSeccEJfWzYlZ9YvW7YsDMNisThlypQTTjhhzpw5DtAcMmTIGWecUZ71ICKbN29esGDBnj17Vq5c6cbcGDNu3LiZM2eeddZZKS+KyO23357mqFx55ZUVjdfXX3998eLFcRyLSGtr6znnnFNfX9/e3v7444+7tN5CoXDxxRe7gOucOXPWr19PRAMGDDjttNNS8dGXCoXCokWLVqxYYYzJ5XLHH398tTAIgDiOV6xY8eyzz2YymTAMJ0+efNJJJwFoa2u7++67HRY8YcKE0047re+sxXH8q1/9qpzpr7rqqr5La8eOHc8///z69etff/11pxmcWzJy5MgxY8Yw8zHHHDNmzJghQ4b0kjL92S54wHRwAab+V/5XsFn3+6y/STP6055D27C+XnLFh+734rtsWK97D66q9K5aTm6v9VBjefT6qRd2ud/bqz2r/0/s56/VelSxfPnI9i3Qz6BP3xurXakx2r24uWLJGqyJ/fW0BvV1GGrEN8pvqXj9oGet173VuKvXSPa62OPo135S7SaWT0b50NcQORV/TWuoLcb636RqDzqIOv9CVFuC9r+GAyrfn2dVnBdU4vuKw9trVA9IR/WzfO0aerWwYvP2v/j604iKA3pIdGLtZx2QJq3Wl4Pg+0OyVN7laiwvVptv+oqn/jS+7yihH3HxdzMs/WSMg+aftEy/bPp+PrhXAfRPhr1L+6zaTxX54F0++uDEcz+FXN8rh3ZpHahm66fG7vsZB7U2+j9r/a+zGh2ATV9+paJxWU41zHpVrW2f9b8BFW/ppV5rFK6omsrbWbH8gTJijfLpEuprd6Ifg1yNyjvSY8j2Yan93thrpnq1vO8j0A93rj8cv9+VU3FqagxUrwk9YPTmr7MW301jDkKY9bqIQwc9HYQptV9L8q/jhBzcOByc8uz/jQdtoZV35/8HsBAB00CatTMAAAAASUVORK5CYII=" alt="Hyundai Shipping"></a>
+    <div class="brand-title">AI 귀국이사&amp;타주이사 견적</div>
+    <a class="brand-manager" href="tel:319-660-0001">이우주 팀장 / 319-660-0001</a>
+  </div>
+  <div class="steps">
+    <div class="step-dot active" data-step="1"><div class="bar"><span></span></div><label>정보입력</label></div>
+    <div class="step-dot" data-step="2"><div class="bar"><span></span></div><label>물품촬영</label></div>
+    <div class="step-dot" data-step="3"><div class="bar"><span></span></div><label>견적확인</label></div>
+    <div class="step-dot" data-step="4"><div class="bar"><span></span></div><label>제출완료</label></div>
+  </div>
+  <div class="steps-pad"></div>
+
+  <!-- STEP 1 -->
+  <div class="screen active" id="screen-1">
+    <div class="eyebrow">Step 1</div>
+    <h1>기본 정보를 입력해 주세요</h1>
+    <div class="banner" id="s1-banner">입력하신 정보를 다시 확인해 주세요. 잘못되었거나 비어있는 항목이 있습니다.</div>
+
+    <div class="field" id="f-packing-date">
+      <label>희망 포장일</label>
+      <div class="date-display" id="in-packing-date-display" tabindex="0">
+        <span id="in-packing-date-text">날짜를 선택해 주세요</span>
+        <svg class="date-cal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+      </div>
+      <input type="hidden" id="in-packing-date">
+      <div class="err-msg">희망 포장일을 선택해 주세요.</div>
+    </div>
+    <div class="field" id="f-email">
+      <label>견적 받으실 이메일 주소</label>
+      <input type="email" id="in-email" placeholder="예: example@gmail.com" autocomplete="email" inputmode="email">
+      <div class="err-msg">올바른 이메일 주소를 입력해 주세요.</div>
+    </div>
+    <div class="field" id="f-name">
+      <label>여권 내 성함</label>
+      <input type="text" id="in-name" placeholder="예: HONG GILDONG" autocomplete="name">
+      <div class="err-msg">여권에 기재된 영문 성함을 입력해 주세요.</div>
+    </div>
+    <div class="field" id="f-zip">
+      <label>출발지 ZIP CODE</label>
+      <input type="text" id="in-zip" placeholder="예: 90220" inputmode="numeric" maxlength="5">
+      <div class="err-msg">5자리 ZIP CODE를 입력해 주세요.</div>
+    </div>
+    <div class="field" id="f-floor">
+      <label>출발지 층수</label>
+      <select id="in-floor">
+        <option value="">선택해 주세요</option>
+        <option value="low">1층 or 2층</option>
+        <option value="elevYes">3층이상 (elevator O)</option>
+        <option value="elevNo">3층이상 (elevator X)</option>
+      </select>
+      <div class="err-msg">출발지 층수를 선택해 주세요.</div>
+    </div>
+    <div class="field" id="f-dest">
+      <label>도착지역</label>
+      <select id="in-dest">
+        <option value="">선택해 주세요</option>
+        <option value="수도권">서울·경기·인천</option>
+        <option value="강원도">강원도</option>
+        <option value="충청북도">충청북도</option>
+        <option value="충청남도">충청남도 (대전·세종 포함)</option>
+        <option value="전라북도">전라북도</option>
+        <option value="전라남도">전라남도 (광주 포함)</option>
+        <option value="경상북도">경상북도 (대구 포함)</option>
+        <option value="경상남도">경상남도 (부산·울산 포함)</option>
+        <option value="제주도">제주도</option>
+      </select>
+      <div class="err-msg">도착지역을 선택해 주세요.</div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="screen" id="screen-2">
+    <div class="eyebrow">Step 2</div>
+    <h1>운송 물품을 촬영해 주세요</h1>
+
+    <div class="search-wrap">
+      <input type="text" id="item-search" placeholder="물품 이름으로 검색 (예: 소파, 냉장고)">
+    </div>
+
+    <div class="sec-tabs" id="sec-tabs"></div>
+    <div class="sticky-count"><span>현재 공간 촬영 <b id="sec-count">0</b>건 · 전체 <b id="all-count">0</b>건</span><span>(수량체크: 박스 단위)</span></div>
+    <div class="item-cards" id="item-list"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="screen" id="screen-3">
+    <div class="eyebrow">Step 3</div>
+    <h1>견적 내역을 확인해 주세요</h1>
+    <div class="sub">촬영하신 물품과 예상 부피예요. 이상이 없으면 아래에서 제출해 주세요.</div>
+
+    <div class="rev-card">
+      <h3>고객 정보</h3>
+      <div id="rev-customer"></div>
+    </div>
+
+    <div class="rev-card">
+      <h3>선택하신 가구 및 생활잔짐</h3>
+      <div id="rev-items"></div>
+    </div>
+
+    <div class="rev-card" id="rev-custom-card" style="display:none;">
+      <h3>직접입력</h3>
+      <div id="rev-custom-photos" class="rev-custom-photos"></div>
+      <div id="rev-custom-note" class="rev-custom-note"></div>
+    </div>
+
+    <div class="rev-card" id="rev-estimate-card">
+      <h3>이용 안내 및 동의</h3>
+      <label class="agree-row" for="agree-checkbox">
+        <input type="checkbox" id="agree-checkbox">
+        <span class="agree-text">
+          <p>본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액이며, 실제 방문 확인 후 최종 금액은 달라질 수 있어요.</p>
+          <p>관세, 세금, 항구 처리비 등 부대비용은 이 견적에 포함되어 있지 않으며 별도로 안내드려요.</p>
+          <p>입력해 주신 물품 정보가 실제와 다를 경우 견적 내용이 조정될 수 있어요.</p>
+          <p>입력해 주신 연락처(이메일 등)로 본 견적과 관련한 안내를 받는 것에 동의합니다.</p>
+        </span>
+      </label>
+      <div class="err-msg" id="agree-err">위 내용에 동의해 주셔야 견적 신청이 가능해요.</div>
+
+      <label class="agree-row" for="agree-duplicate-checkbox" style="margin-top:16px;">
+        <input type="checkbox" id="agree-duplicate-checkbox">
+        <span class="agree-text">
+          <p>본 견적서는 이우주 팀장님께도 함께 전달되어 검토되고 있어요. 동일한 내용으로 중복 신청하지 않도록 부탁드려요.</p>
+        </span>
+      </label>
+      <div class="err-msg" id="agree-duplicate-err">위 내용을 확인해 주셔야 견적 신청이 가능해요.</div>
+    </div>
+  </div>
+
+  <!-- LOADING (between step 3 and 4) -->
+  <div class="screen" id="screen-loading">
+    <div class="loading-wrap">
+      <svg class="spinner" viewBox="0 0 40 40" width="72" height="72">
+        <g fill="#D97757">
+          <g class="ray-wrap" transform="rotate(0 20 20)"><rect class="ray" style="animation-delay:0.00s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(30 20 20)"><rect class="ray" style="animation-delay:0.10s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(60 20 20)"><rect class="ray" style="animation-delay:0.20s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(90 20 20)"><rect class="ray" style="animation-delay:0.30s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(120 20 20)"><rect class="ray" style="animation-delay:0.40s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(150 20 20)"><rect class="ray" style="animation-delay:0.50s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(180 20 20)"><rect class="ray" style="animation-delay:0.60s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(210 20 20)"><rect class="ray" style="animation-delay:0.70s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(240 20 20)"><rect class="ray" style="animation-delay:0.80s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(270 20 20)"><rect class="ray" style="animation-delay:0.90s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(300 20 20)"><rect class="ray" style="animation-delay:1.00s" x="19" y="3" width="2" height="10" rx="1"/></g>
+          <g class="ray-wrap" transform="rotate(330 20 20)"><rect class="ray" style="animation-delay:1.10s" x="19" y="3" width="2" height="10" rx="1"/></g>
+        </g>
+      </svg>
+      <div class="loading-title">각 사진 및 물품의 부피를<br>AI 통해 측정 및 계산 중에 있습니다.</div>
+      <div class="loading-sub">잠시만 기다려 주시기 바랍니다.</div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="screen" id="screen-4">
+    <div class="eyebrow">Step 4</div>
+    <h1>접수가 완료되었습니다</h1>
+    <div class="sub" id="submit-status">담당자에게 자동으로 전송 중이에요…</div>
+    <div class="submit-notice">
+      <div>1. 하기 Confirmation Number를 꼭 화면스캔 혹은 저장해 주시기 바랍니다.</div>
+      <div>2. 정식 견적서는 24시간 이내 이메일 통해 확인 가능 하세요.(주말 신청 시, 월요일 확인)</div>
+    </div>
+
+    <div class="stamp-wrap">
+      <div class="stamp">
+        <div class="t1">RECEIVED</div>
+        <div class="t2" id="quote-id">HD-000000</div>
+        <div class="t3">HYUNDAI SHIPPING USA</div>
+      </div>
+    </div>
+
+    <div class="contact-card">
+      <div class="contact-card-title">언제든지 편히 궁금하신 점 말씀 부탁 드립니다.</div>
+      <a class="contact-row" id="contact-tel" href="tel:319-660-0001">
+        <div class="contact-ico">📞</div>
+        <div class="contact-body"><div class="ck">전화 혹은 문자</div><div class="cv">319-660-0001</div></div>
+        <div class="contact-arrow">›</div>
+      </a>
+      <a class="contact-row" id="contact-email" href="mailto:ricky@cyhds.com">
+        <div class="contact-ico">✉️</div>
+        <div class="contact-body"><div class="ck">이메일</div><div class="cv">ricky@cyhds.com</div></div>
+        <div class="contact-arrow">›</div>
+      </a>
+      <a class="contact-row" id="contact-kakao" href="kakaotalk://">
+        <div class="contact-ico">💬</div>
+        <div class="contact-body"><div class="ck">카카오톡 ID</div><div class="cv">HDSUSA</div></div>
+        <div class="contact-arrow">›</div>
+      </a>
+    </div>
+    <button class="btn btn-navy" id="btn-done" style="margin-top:18px;">완료</button>
+  </div>
+
+  <div class="bottom-bar" id="bar-1">
+    <button class="btn btn-yellow" id="btn-1-next">견적</button>
+  </div>
+  <div class="bottom-bar" id="bar-2" style="display:none;">
+    <button class="btn btn-yellow" id="btn-2-next" disabled>견적서 확인 (<span id="bar2-count">0</span>건 촬영됨)</button>
+  </div>
+  <div class="bottom-bar" id="bar-3" style="display:none;">
+    <button class="btn btn-yellow" id="btn-3-next">견적 신청</button>
+    <button class="btn btn-ghost" id="btn-3-back">물품 다시 촬영하기</button>
+  </div>
+
+  <input type="file" id="camera-input" accept="image/*" capture="environment">
+
+  <div class="camera-modal hidden" id="camera-modal">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <canvas id="camera-canvas" style="display:none;"></canvas>
+    <div class="camera-topbar">
+      <button class="camera-close" id="camera-cancel" aria-label="닫기">✕</button>
+    </div>
+    <div class="camera-guide">
+      <span class="cg-corner tl"></span><span class="cg-corner tr"></span>
+      <span class="cg-corner bl"></span><span class="cg-corner br"></span>
+    </div>
+    <div class="camera-hint" id="camera-hint">물품 전체가 사각형 안에 들어오도록 맞춰서 촬영해 주세요</div>
+    <div class="camera-bottombar">
+      <button class="camera-shutter" id="camera-shutter" aria-label="촬영"></button>
+    </div>
+  </div>
+
+  <div id="pdf-render-area"></div>
+
+  <div class="cal-overlay" id="cal-overlay">
+    <div class="cal-popup" id="cal-popup">
+      <div class="cal-header">
+        <button class="cal-nav" id="cal-prev" aria-label="이전 달">‹</button>
+        <div class="cal-month-label" id="cal-month-label">2026년 9월</div>
+        <button class="cal-nav" id="cal-next" aria-label="다음 달">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <button class="cal-close" id="cal-close">닫기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="assembly-modal">
+    <div class="modal-card">
+      <div class="modal-title" id="assembly-modal-title">분해 가능 여부</div>
+      <div class="modal-sub">사진 촬영이 완료됐어요. 이 가구는 분해가 가능한가요?</div>
+      <div class="modal-btns">
+        <button class="modal-btn o" id="assembly-btn-o">O · 분해 가능</button>
+        <button class="modal-btn x" id="assembly-btn-x">X · 분해 불가</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="mismatch-modal">
+    <div class="modal-card">
+      <div class="modal-title" id="mismatch-modal-title">사진을 다시 확인해 주세요</div>
+      <div class="modal-sub" id="mismatch-modal-sub">찍으신 사진이 선택하신 항목과 다르게 보여요. 다시 촬영하시겠어요?</div>
+      <div class="modal-btns">
+        <button class="modal-btn x" id="mismatch-btn-retake">다시 찍기</button>
+        <button class="modal-btn o" id="mismatch-btn-keep">그대로 사용</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 견적서 PDF에 쓸 웹폰트를 최대한 미리 요청해둠 — 실제 신청 시점엔 이미 캐시돼 있을 가능성이 높아짐
+if(document.fonts){
+  document.fonts.load("400 11px 'Noto Sans KR'").catch(()=>{});
+  document.fonts.load("700 11px 'Noto Sans KR'").catch(()=>{});
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.error('SW registration failed', err));
+  });
+}
+
+// PWA install: show our own "설치하기" button the moment Chrome signals the site
+// is installable, instead of waiting on Chrome's own (slower, less reliable) banner timing.
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if(!sessionStorage.getItem('installBannerDismissed')){
+    document.getElementById('install-banner').classList.add('show');
+  }
+});
+document.getElementById('install-banner-btn').addEventListener('click', async ()=>{
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+document.getElementById('install-banner-close').addEventListener('click', ()=>{
+  document.getElementById('install-banner').classList.remove('show');
+  sessionStorage.setItem('installBannerDismissed', '1');
+});
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('install-banner').classList.remove('show');
+  deferredInstallPrompt = null;
+});
+
+// Keep the fixed bottom bar glued right above the mobile keyboard, and make sure
+// the focused input scrolls into a visible spot (fixes: input hidden behind keyboard).
+if(window.visualViewport){
+  const adjustForKeyboard = ()=>{
+    const vv = window.visualViewport;
+    const covered = window.innerHeight - vv.height - vv.offsetTop;
+    document.querySelectorAll('.bottom-bar').forEach(bar=>{
+      bar.style.transform = covered > 40 ? `translateY(-${covered}px)` : '';
+    });
+  };
+  window.visualViewport.addEventListener('resize', adjustForKeyboard);
+  window.visualViewport.addEventListener('scroll', adjustForKeyboard);
+}
+document.addEventListener('focusin', (e)=>{
+  if(e.target.matches('input, textarea')){
+    setTimeout(()=>{
+      e.target.scrollIntoView({block:'center', behavior:'smooth'});
+    }, 250);
+  }
+});
+
+// ===== EmailJS 설정 =====
+// https://www.emailjs.com 에서 무료 가입 후, 아래 3개 값을 채워 넣어야
+// 4페이지 도착 시 RICKY@CYHDS.COM 으로 자동 이메일이 발송됩니다.
+// (미설정 상태에서는 자동발송이 실행되지 않고 안내 문구만 표시됩니다.)
+const EMAILJS_PUBLIC_KEY = 'VtQ7iTht-GUlJUTpK';   // Account 탭의 Public Key
+const EMAILJS_SERVICE_ID = 'service_rcbap8a';   // Email Services 에서 만든 서비스 ID (ricky@cyhds.com SMTP)
+const EMAILJS_TEMPLATE_ID = 'template_zkkn5zd';  // Email Templates 에서 만든 템플릿 ID (담당자 수신용)
+const EMAILJS_CUSTOMER_TEMPLATE_ID = 'template_3ahnzpa';  // 고객용 견적서(PDF) 발송 템플릿 ID
+// ↑ 이 템플릿은 EmailJS 대시보드에서 아래처럼 설정되어 있어야 합니다:
+//   - To email: {{to_email}}
+//   - CC: ricky@cyhds.com (고정값으로 직접 입력하거나, {{cc_email}}로 연결해도 됨 — 코드에서 cc_email을 보내고 있음)
+//   - Subject: {{customer_name}} 님, ㈜현대해운 USA 에서 이주화물 운송에 대한 견적 안내 드립니다.
+//   - Body: 안내 문구(고정) + 아래 변수로 다운로드 링크 삽입
+//       {{quote_id}}  — 견적번호
+//       {{pdf_url}}   — 견적서 PDF 다운로드 링크 (버튼이나 <a href="{{pdf_url}}">로 넣기)
+
+// ===== Google Gemini API (사진 크기판단 · 항목 일치확인용) =====
+// 키는 더 이상 이 파일에 두지 않습니다. 대신 /api/analyze-photo.js 서버 함수가
+// Vercel 환경변수(GEMINI_API_KEY)에서 안전하게 읽어와 사용합니다.
+// → Vercel 대시보드 → Settings → Environment Variables 에서 GEMINI_API_KEY를 등록하세요.
+
+// ===== Cloudinary 설정 (사진 원본을 업로드하고 링크만 이메일에 담기 위함) =====
+const CLOUDINARY_CLOUD_NAME = 'sbzwquxg';
+const CLOUDINARY_UPLOAD_PRESET = 'a0bvqm1d';
+async function uploadToCloudinary(dataUrl){
+  try{
+    const fd = new FormData();
+    fd.append('file', dataUrl);
+    fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method:'POST', body: fd
+    });
+    const data = await res.json();
+    if(!res.ok || !data.secure_url){
+      // Cloudinary가 거부한 실제 이유를 그대로 로그에 남김 (원인 파악용)
+      console.error('cloudinary upload rejected:', res.status, data?.error?.message || data);
     }
+    return data.secure_url || null;
+  }catch(err){
+    console.error('cloudinary upload failed', err);
+    return null;
   }
 }
+
+// build one HTML gallery page (all customer photos) and upload it as a single file,
+// so the staff email can link to ONE page instead of one link per photo.
+function loadImgEl(src){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// build ONE collage image (grid of all photos + labels) and upload it as a normal
+// image (Cloudinary blocks raw HTML uploads for security, so a plain image is used instead).
+async function uploadGalleryPage(photoEntries, quoteId){
+  const withPhoto = photoEntries.filter(it=>it.photo || it.cloudUrl);
+  if(withPhoto.length===0) return null;
+  try{
+    const cell = 220, labelH = 26, pad = 10, titleH = 44;
+    const cols = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(withPhoto.length))));
+    const rows = Math.ceil(withPhoto.length / cols);
+    const canvas = document.createElement('canvas');
+    canvas.width = cols * (cell + pad) + pad;
+    canvas.height = titleH + rows * (cell + labelH + pad) + pad;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#faf6ef';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#152341';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillText(`견적 ${quoteId} — 촬영 사진 (${withPhoto.length}장)`, pad, 28);
+
+    for(let i=0; i<withPhoto.length; i++){
+      const it = withPhoto[i];
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = pad + col * (cell + pad);
+      const y = titleH + pad + row * (cell + labelH + pad);
+      try{
+        const img = await loadImgEl(it.photo || it.cloudUrl);
+        // cover-fit crop into the cell square
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, x, y, cell, cell);
+      }catch(e){
+        ctx.fillStyle = '#e4ddd0';
+        ctx.fillRect(x, y, cell, cell);
+      }
+      ctx.fillStyle = '#1c1f26';
+      ctx.font = '13px system-ui, sans-serif';
+      const label = it.label.length > 16 ? it.label.slice(0,15)+'…' : it.label;
+      ctx.fillText(label, x, y + cell + 18);
+    }
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+    return await uploadToCloudinary(dataUrl);
+  }catch(err){
+    console.error('gallery collage build/upload failed', err);
+    return null;
+  }
+}
+if(EMAILJS_PUBLIC_KEY && window.emailjs){
+  emailjs.init({publicKey: EMAILJS_PUBLIC_KEY});
+}
+
+const SECTIONS = [
+  {id:'living', name:'거실', items:[
+    {label:'장식장(소)', cbm:0.669, icon:'wardrobe', size:'sm'},
+    {label:'장식장(중)', cbm:0.874, icon:'wardrobe', size:'md'},
+    {label:'장식장(대)', cbm:1.657, icon:'wardrobe', size:'lg'},
+    {label:'서랍장(3단)', cbm:0.907, icon:'drawer-chest', size:'sm'},
+    {label:'서랍장(5단)', cbm:1.236, icon:'drawer-chest', size:'md'},
+    {label:'소파(1인:arm chair)', cbm:1.404, icon:'armchair', size:'sm'},
+    {label:'소파(2인:love seat)', cbm:2.367, icon:'sofa', size:'md'},
+    {label:'소파(3인)', cbm:3.157, icon:'sofa', size:'lg'},
+    {label:'소파테이블', cbm:0.414, icon:'console-table'},
+    {label:'스탠딩 에어컨', cbm:1.141, icon:'standing-ac'},
+    {label:'소파옆 협탁', cbm:0.391, icon:'side-table'},
+    {label:'커피 테이블', cbm:0.874, icon:'coffee-table2'},
+    {label:'그랜드피아노 (대)', cbm:6.189, icon:'piano', size:'xl'},
+    {label:'그랜드피아노 (중)', cbm:5.27, icon:'piano', size:'lg'},
+    {label:'베이비 그랜드피아노', cbm:4.506, icon:'piano', size:'lg'},
+    {label:'upright 피아노', cbm:3.048, icon:'piano', size:'md'},
+    {label:'전자피아노', cbm:0.764, icon:'piano', size:'sm'},
+    {label:'마사지(안마)의자', cbm:2.015, icon:'massage-chair'},
+    {label:'런닝머신', cbm:1.529, icon:'treadmill'},
+    {label:'흔들의자', cbm:1.269, icon:'rocking-chair'},
+    {label:'콘솔', cbm:0.774, icon:'console'},
+    {label:"액자(대):72inch/Lx2", icon:'image'},
+    {label:'액자(중):36inch/M', icon:'image'},
+    {label:'액자(소):18inch/S', icon:'image'},
+    {label:'도자기', icon:'vase'},
+    {label:'카페트/돗자리', icon:'rug'},
+    {label:'장식품 (스탠딩)', icon:'figurine'},
+    {label:'조각', icon:'landmark'},
+    {label:'스피커', icon:'speaker'},
+    {label:"TV (65'기준)", cbm:0.508, icon:'tv'},
+    {label:'TV 캐비닛', cbm:0.708, icon:'tv-cabinet'},
+  ]},
+  {id:'bedroom', name:'침실', items:[
+    {label:'CK침대', cbm:4.403, icon:'bed', size:'xl'},
+    {label:'K침대', cbm:3.975, icon:'bed', size:'lg'},
+    {label:'Q침대', cbm:3.092, icon:'bed', size:'md'},
+    {label:'D침대', cbm:2.883, icon:'bed', size:'sm'},
+    {label:'s침대', cbm:2.254, icon:'bed', size:'sm'},
+    {label:'이층침대', cbm:4.681, icon:'bed', size:'lg'},
+    {label:'돌 침대', cbm:3.558, icon:'bed', size:'lg'},
+    {label:'(아기) 침대, CRIB', cbm:1.849, icon:'crib'},
+    {label:'화장대', cbm:1.282, icon:'vanity'},
+    {label:'전기장판', icon:'heating-pad'},
+    {label:'문갑', cbm:0.818, icon:'chest'},
+    {label:'고가구 (코너장)', cbm:1.535, icon:'corner-cabinet'},
+    {label:'고가구 (문갑)', cbm:1.025, icon:'antique-chest'},
+    {label:'고가구 (궤짝)', cbm:0.79, icon:'trunk'},
+    {label:'협탁', cbm:0.486, icon:'side-table'},
+    {label:'옷 & 의류', icon:'shirt'},
+    {label:'이불', icon:'duvet'},
+    {label:'거울', icon:'mirror'},
+    {label:'램프', icon:'lamp'},
+    {label:'스탠드', icon:'lamp-floor'},
+    {label:'가습기', icon:'humidifier'},
+  ]},
+  {id:'study', name:'공부방', items:[
+    {label:'책상(중):분해(O,X)', cbm:1.123, icon:'desk', size:'md', needsAssembly:true},
+    {label:'책상(대):분해(O,X)', cbm:1.645, icon:'desk', size:'lg', needsAssembly:true},
+    {label:'책장 (소)', cbm:0.335, icon:'bookshelf', size:'sm'},
+    {label:'책장 (중)', cbm:0.677, icon:'bookshelf', size:'md'},
+    {label:'책장 (대)', cbm:1.32, icon:'bookshelf', size:'lg'},
+    {label:'사무용 의자', cbm:0.822, icon:'office-chair'},
+    {label:'일반 의자', cbm:0.584, icon:'plain-chair'},
+    {label:'책상용 작은 서랍장', cbm:0.313, icon:'archive'},
+    {label:'컴퓨터', icon:'laptop'},
+    {label:'프린터', icon:'printer'},
+    {label:'장롱 (주니어장)', cbm:2.022, icon:'wardrobe', size:'xl'},
+    {label:'Folding 간이의자', cbm:0.226, icon:'folding-chair'},
+    {label:'컴퓨터 책상', cbm:1.028, icon:'computer-desk'},
+    {label:'LP, CD, DVD', icon:'disc'},
+    {label:'레고,Figure', icon:'lego'},
+    {label:'서재 태이블', cbm:1.123, icon:'reading-table'},
+    {label:'책', icon:'book'},
+    {label:'문구류 및 잡화', icon:'pencil'},
+    {label:'서류 및 파일', icon:'folder'},
+  ]},
+  {id:'kitchen', name:'부엌', items:[
+    {label:'허리높이 김치냉장고', cbm:1.057, icon:'refrigerator', size:'sm'},
+    {label:'standing 김치냉장고', cbm:1.584, icon:'refrigerator', size:'md'},
+    {label:'식탁 2인 Table', cbm:0.312, icon:'dining-table2', size:'sm'},
+    {label:'식탁 4인 Table', cbm:0.58, icon:'dining-table2', size:'md'},
+    {label:'식탁 6인 Table', cbm:0.823, icon:'dining-table2', size:'lg'},
+    {label:'식탁 8인 Table', cbm:1.227, icon:'dining-table2', size:'xl'},
+    {label:'식탁 2인 Chair', cbm:0.789, icon:'dining-chair2', size:'sm'},
+    {label:'식탁 4인 Chair', cbm:1.577, icon:'dining-chair2', size:'sm'},
+    {label:'식탁 6인 Chair', cbm:2.366, icon:'dining-chair2', size:'md'},
+    {label:'식탁 8인 Chair', cbm:3.155, icon:'dining-chair2', size:'lg'},
+    {label:'그릇', icon:'bowl'},
+    {label:'전기밥솥', icon:'rice-cooker'},
+    {label:'커피머신', icon:'coffee'},
+    {label:'냄비', icon:'soup'},
+    {label:'부엌잡화', icon:'basket'},
+    {label:'주방기구', icon:'utensils'},
+    {label:'부페 테이블', cbm:1.389, icon:'buffet'},
+    {label:'그릇 장', cbm:1.485, icon:'display-cabinet'},
+    {label:'양문형 냉장고(대형)', cbm:2.63, icon:'refrigerator', size:'xl'},
+    {label:'양문형 냉장고(중형)', cbm:2.267, icon:'refrigerator', size:'lg'},
+    {label:'일반형 냉장고', cbm:1.744, icon:'refrigerator', size:'md'},
+    {label:'소형 냉장고', cbm:0.482, icon:'refrigerator', size:'sm'},
+    {label:'전자레인지', icon:'microwave'},
+    {label:'정수기', icon:'dispenser'},
+    {label:'교자상', icon:'low-table'},
+    {label:'식기세척기', icon:'washing-machine'},
+    {label:'식기건조기', icon:'washing-machine'},
+  ]},
+  {id:'utility', name:'Etc.', items:[
+    {label:'스타일러', cbm:1.047, icon:'styler'},
+    {label:'세탁기', cbm:1.144, icon:'washing-machine'},
+    {label:'건조기', cbm:1.144, icon:'washing-machine'},
+    {label:'신발', icon:'footprints'},
+    {label:'욕실용품', icon:'bathtub'},
+    {label:'골프용품', icon:'golf'},
+    {label:'자전거', icon:'bike'},
+    {label:'등산용품', icon:'mountain'},
+    {label:'캠핑장비', icon:'tent'},
+    {label:'전기히터', icon:'heater'},
+    {label:'진공청소기', icon:'wind'},
+    {label:'선풍기', icon:'fan'},
+    {label:'PVC 박스', icon:'box'},
+    {label:'스키.스노보드', icon:'ski'},
+    {label:'볼링용품', icon:'bowling'},
+    {label:'인라인 스케이트', icon:'inline-skate'},
+    {label:'스케이트', icon:'ice-skate'},
+    {label:'킥보드', icon:'kickboard'},
+    {label:'낚시용품', icon:'fish'},
+    {label:'병풍', icon:'screen'},
+    {label:'재봉틀', icon:'scissors'},
+    {label:'항아리', icon:'jar'},
+    {label:'청소도구', icon:'broom'},
+  ]},
+];
+
+// flatten with stable unique ids: "<sectionId>__<index>"
+SECTIONS.forEach(sec=>{
+  sec.items.forEach((it,i)=>{
+    it.id = sec.id + '__' + i;
+    it.sectionId = sec.id;
+  });
+});
+
+// items that use tap-to-count quantity instead of photo capture
+const norm = s => s.replace(/[\s.,&()':]/g,'').toLowerCase();
+const TIER_PERCENT = {
+  '1':4, '2':7, '3':12, '4':16, '5':19, '6':24, '7':28, '8':31, '9':36, '10':40,
+  '-1':-3, '-2':-5, '-3':-8, '-4':-10, '-5':-13, '-6':-16, '-7':-17, '-8':-19, '-9':-22, '-10':-24,
+};
+// AI가 사진에서 판정한 크기 단계(sizeTier, -10~+10)를 %로 변환 — 0이거나 없으면 0%
+function tierPct(sizeTier){
+  if(!sizeTier) return 0;
+  return TIER_PERCENT[String(sizeTier)] ?? 0;
+}
+const DIM_DATA = {
+  '장식장소': {w:30, d:16, h:42, realcbm:0.519, qty:1, loadcbm:0.669},
+  '소파테이블': {w:39, d:20, h:16, realcbm:0.321, qty:1, loadcbm:0.414},
+  '전자피아노': {w:53, d:14, h:31, realcbm:0.592, qty:1, loadcbm:0.764},
+  '장식장중': {w:35, d:16, h:47, realcbm:0.677, qty:1, loadcbm:0.874},
+  '스탠딩에어컨': {w:22, d:22, h:71, realcbm:0.884, qty:1, loadcbm:1.141},
+  '마사지안마의자': {w:30, d:46, h:44, realcbm:1.562, qty:1, loadcbm:2.015},
+  '장식장대': {w:47, d:18, h:59, realcbm:1.284, qty:1, loadcbm:1.657},
+  '소파옆협탁': {w:20, d:22, h:24, realcbm:0.272, qty:1, loadcbm:0.391},
+  '런닝머신': {w:28, d:59, h:33, realcbm:1.403, qty:1, loadcbm:1.529},
+  '서랍장3단': {w:44, d:18, h:28, realcbm:0.571, qty:1, loadcbm:0.907},
+  '커피테이블': {w:46, d:24, h:18, realcbm:0.511, qty:1, loadcbm:0.874},
+  '흔들의자': {w:28, d:35, h:39, realcbm:0.983, qty:1, loadcbm:1.269},
+  '서랍장5단': {w:40, d:18, h:48, realcbm:0.889, qty:1, loadcbm:1.236},
+  'upright피아노': {w:59, d:24, h:47, realcbm:1.712, qty:1, loadcbm:3.048},
+  '콘솔': {w:47, d:16, h:31, realcbm:0.6, qty:1, loadcbm:0.774},
+  '에어컨벽걸이': {w:33, d:8, h:12, realcbm:0.185, qty:1, loadcbm:0.61},
+  '소파1인armchair': {w:35, d:35, h:33, realcbm:1.04, qty:1, loadcbm:1.404},
+  '그랜드피아노대': {w:59, d:79, h:40, realcbm:4.797, qty:1, loadcbm:6.189},
+  '소파2인loveseat': {w:59, d:35, h:33, realcbm:1.753, qty:1, loadcbm:2.367},
+  '그랜드피아노중': {w:59, d:69, h:39, realcbm:4.085, qty:1, loadcbm:5.27},
+  'tv65기준': {w:64, d:6, h:35, realcbm:0.346, qty:1, loadcbm:0.508},
+  '소파3인': {w:83, d:35, h:33, realcbm:2.467, qty:1, loadcbm:3.157},
+  '베이비그랜드피아노': {w:59, d:59, h:39, realcbm:3.493, qty:1, loadcbm:4.506},
+  'tv캐비닛': {w:59, d:16, h:18, realcbm:0.437, qty:1, loadcbm:0.708},
+  'ck침대': {w:72, d:84, h:23, realcbm:3.579, qty:1, loadcbm:4.403},
+  '돌침대': {w:59, d:79, h:23, realcbm:2.758, qty:1, loadcbm:3.558},
+  '협탁': {w:22, d:18, h:32, realcbm:0.326, qty:1, loadcbm:0.486},
+  'k침대': {w:70, d:78, h:23, realcbm:3.231, qty:1, loadcbm:3.975},
+  '아기침대crib': {w:28, d:51, h:39, realcbm:1.433, qty:1, loadcbm:1.849},
+  'q침대': {w:59, d:72, h:23, realcbm:2.514, qty:1, loadcbm:3.092},
+  '화장대': {w:39, d:18, h:55, realcbm:0.993, qty:1, loadcbm:1.282},
+  'd침대': {w:55, d:72, h:23, realcbm:2.344, qty:1, loadcbm:2.883},
+  's침대': {w:43, d:72, h:23, realcbm:1.832, qty:1, loadcbm:2.254},
+  '문갑': {w:35, d:16, h:44, realcbm:0.634, qty:1, loadcbm:0.818},
+  '이층침대': {w:39, d:79, h:48, realcbm:3.805, qty:1, loadcbm:4.681},
+  '고가구코너장': {w:28, d:28, h:59, realcbm:1.19, qty:1, loadcbm:1.535},
+  '고가구문갑': {w:39, d:18, h:44, realcbm:0.795, qty:1, loadcbm:1.025},
+  '고가구궤짝': {w:35, d:20, h:34, realcbm:0.612, qty:1, loadcbm:0.79},
+  '책상중분해ox': {w:47, d:24, h:30, realcbm:0.871, qty:1, loadcbm:1.123},
+  '사무용의자': {w:24, d:24, h:43, realcbm:0.637, qty:1, loadcbm:0.822},
+  '장롱주니어장': {w:39, d:22, h:71, realcbm:1.567, qty:1, loadcbm:2.022},
+  '서재태이블': {w:47, d:24, h:30, realcbm:0.871, qty:1, loadcbm:1.123},
+  '책상대분해ox': {w:59, d:28, h:30, realcbm:1.275, qty:1, loadcbm:1.645},
+  '일반의자': {w:20, d:22, h:40, realcbm:0.453, qty:1, loadcbm:0.584},
+  'folding간이의자': {w:18, d:20, h:22, realcbm:0.204, qty:1, loadcbm:0.226},
+  '책장소': {w:24, d:12, h:35, realcbm:0.259, qty:1, loadcbm:0.335},
+  '책상용작은서랍장': {w:20, d:18, h:24, realcbm:0.222, qty:1, loadcbm:0.313},
+  '컴퓨터책상': {w:43, d:24, h:30, realcbm:0.797, qty:1, loadcbm:1.028},
+  '책장중': {w:31, d:14, h:47, realcbm:0.525, qty:1, loadcbm:0.677},
+  '책장대': {w:35, d:16, h:71, realcbm:1.023, qty:1, loadcbm:1.32},
+  '허리높이김치냉장고': {w:35, d:26, h:35, realcbm:0.82, qty:1, loadcbm:1.057},
+  '부페테이블': {w:59, d:18, h:31, realcbm:0.847, qty:1, loadcbm:1.389},
+  'standing김치냉장고': {w:24, d:28, h:71, realcbm:1.228, qty:1, loadcbm:1.584},
+  '그릇장': {w:35, d:18, h:71, realcbm:1.151, qty:1, loadcbm:1.485},
+  '식탁2인table': {w:28, d:28, h:12, realcbm:0.242, qty:1, loadcbm:0.312},
+  '양문형냉장고대형': {w:36, d:31, h:71, realcbm:2.039, qty:1, loadcbm:2.63},
+  '식탁4인table': {w:47, d:31, h:12, realcbm:0.45, qty:1, loadcbm:0.58},
+  '양문형냉장고중형': {w:33, d:30, h:69, realcbm:1.758, qty:1, loadcbm:2.267},
+  '식탁6인table': {w:59, d:35, h:12, realcbm:0.638, qty:1, loadcbm:0.823},
+  '일반형냉장고': {w:28, d:28, h:67, realcbm:1.352, qty:1, loadcbm:1.744},
+  '식탁8인table': {w:79, d:39, h:12, realcbm:0.951, qty:1, loadcbm:1.227},
+  '소형냉장고': {w:20, d:22, h:33, realcbm:0.374, qty:1, loadcbm:0.482},
+  '식탁2인chair': {w:18, d:20, h:33, realcbm:0.306, qty:2, loadcbm:0.789},
+  '식탁4인chair': {w:18, d:20, h:33, realcbm:0.306, qty:4, loadcbm:1.577},
+  '식탁6인chair': {w:18, d:20, h:33, realcbm:0.306, qty:6, loadcbm:2.366},
+  '식탁8인chair': {w:18, d:20, h:33, realcbm:0.306, qty:8, loadcbm:3.155},
+  '스타일러': {w:18, d:24, h:73, realcbm:0.811, qty:1, loadcbm:1.047},
+  '세탁기': {w:24, d:26, h:44, realcbm:0.706, qty:1, loadcbm:1.144},
+  '건조기': {w:24, d:26, h:44, realcbm:0.706, qty:1, loadcbm:1.144},
+};
+const FORMULA_DATA = {
+  '장식장소': {w:30, d:16, h:42, mult:1.29, ea:1},
+  '소파테이블': {w:39, d:20, h:16, mult:1.29, ea:1},
+  '전자피아노': {w:53, d:14, h:31, mult:1.29, ea:1},
+  '장식장중': {w:35, d:16, h:47, mult:1.29, ea:1},
+  '스탠딩에어컨': {w:22, d:22, h:71, mult:1.29, ea:1},
+  '마사지안마의자': {w:30, d:46, h:44, mult:1.29, ea:1},
+  '장식장대': {w:47, d:18, h:59, mult:1.29, ea:1},
+  '소파옆협탁': {w:20, d:22, h:24, mult:1.44, ea:1},
+  '런닝머신': {w:28, d:59, h:33, mult:1.09, ea:1},
+  '서랍장3단': {w:44, d:18, h:28, mult:1.59, ea:1},
+  '커피테이블': {w:46, d:24, h:18, mult:1.71, ea:1},
+  '흔들의자': {w:28, d:35, h:39, mult:1.29, ea:1},
+  '서랍장5단': {w:40, d:18, h:48, mult:1.39, ea:1},
+  'upright피아노': {w:59, d:24, h:47, mult:1.78, ea:1},
+  '콘솔': {w:47, d:16, h:31, mult:1.29, ea:1},
+  '에어컨벽걸이': {w:33, d:8, h:12, mult:3.29, ea:1},
+  '소파1인armchair': {w:35, d:35, h:33, mult:1.35, ea:1},
+  '그랜드피아노대': {w:59, d:79, h:40, mult:1.29, ea:1},
+  '소파2인loveseat': {w:59, d:35, h:33, mult:1.35, ea:1},
+  '그랜드피아노중': {w:59, d:69, h:39, mult:1.29, ea:1},
+  'tv65기준': {w:64, d:6, h:35, mult:1.47, ea:1},
+  '소파3인': {w:83, d:35, h:33, mult:1.28, ea:1},
+  '베이비그랜드피아노': {w:59, d:59, h:39, mult:1.29, ea:1},
+  'tv캐비닛': {w:59, d:16, h:18, mult:1.62, ea:1},
+  'ck침대': {w:72, d:84, h:23, mult:1.23, ea:1},
+  '돌침대': {w:59, d:79, h:23, mult:1.29, ea:1},
+  '협탁': {w:22, d:18, h:32, mult:1.49, ea:1},
+  'k침대': {w:70, d:78, h:23, mult:1.23, ea:1},
+  '아기침대crib': {w:28, d:51, h:39, mult:1.29, ea:1},
+  'q침대': {w:59, d:72, h:23, mult:1.23, ea:1},
+  '화장대': {w:39, d:18, h:55, mult:1.29, ea:1},
+  'd침대': {w:55, d:72, h:23, mult:1.23, ea:1},
+  's침대': {w:43, d:72, h:23, mult:1.23, ea:1},
+  '문갑': {w:35, d:16, h:44, mult:1.29, ea:1},
+  '이층침대': {w:39, d:79, h:48, mult:1.23, ea:1},
+  '고가구코너장': {w:28, d:28, h:59, mult:1.29, ea:1},
+  '고가구문갑': {w:39, d:18, h:44, mult:1.29, ea:1},
+  '고가구궤짝': {w:35, d:20, h:34, mult:1.29, ea:1},
+  '책상중분해ox': {w:47, d:24, h:30, mult:1.29, ea:1},
+  '사무용의자': {w:24, d:24, h:43, mult:1.29, ea:1},
+  '장롱주니어장': {w:39, d:22, h:71, mult:1.29, ea:1},
+  '서재태이블': {w:47, d:24, h:30, mult:1.29, ea:1},
+  '책상대분해ox': {w:59, d:28, h:30, mult:1.29, ea:1},
+  '일반의자': {w:20, d:22, h:40, mult:1.29, ea:1},
+  'folding간이의자': {w:18, d:20, h:22, mult:1.11, ea:1},
+  '책장소': {w:24, d:12, h:35, mult:1.29, ea:1},
+  '책상용작은서랍장': {w:20, d:18, h:24, mult:1.41, ea:1},
+  '컴퓨터책상': {w:43, d:24, h:30, mult:1.29, ea:1},
+  '책장중': {w:31, d:14, h:47, mult:1.29, ea:1},
+  '책장대': {w:35, d:16, h:71, mult:1.29, ea:1},
+  '허리높이김치냉장고': {w:35, d:26, h:35, mult:1.29, ea:1},
+  '부페테이블': {w:59, d:18, h:31, mult:1.64, ea:1},
+  'standing김치냉장고': {w:24, d:28, h:71, mult:1.29, ea:1},
+  '그릇장': {w:35, d:18, h:71, mult:1.29, ea:1},
+  '식탁2인table': {w:28, d:28, h:12, mult:1.29, ea:1},
+  '양문형냉장고대형': {w:36, d:31, h:71, mult:1.29, ea:1},
+  '식탁4인table': {w:47, d:31, h:12, mult:1.29, ea:1},
+  '양문형냉장고중형': {w:33, d:30, h:69, mult:1.29, ea:1},
+  '식탁6인table': {w:59, d:35, h:12, mult:1.29, ea:1},
+  '일반형냉장고': {w:28, d:28, h:67, mult:1.29, ea:1},
+  '식탁8인table': {w:79, d:39, h:12, mult:1.29, ea:1},
+  '소형냉장고': {w:20, d:22, h:33, mult:1.29, ea:1},
+  '식탁2인chair': {w:18, d:20, h:33, mult:1.29, ea:2},
+  '식탁4인chair': {w:18, d:20, h:33, mult:1.29, ea:4},
+  '식탁6인chair': {w:18, d:20, h:33, mult:1.29, ea:6},
+  '식탁8인chair': {w:18, d:20, h:33, mult:1.29, ea:8},
+  '스타일러': {w:18, d:24, h:73, mult:1.29, ea:1},
+  '세탁기': {w:24, d:26, h:44, mult:1.62, ea:1},
+  '건조기': {w:24, d:26, h:44, mult:1.62, ea:1},
+};
+const QTY_LABELS = [
+  '액자(대):72inch/Lx2','액자(중):36inch/M','액자(소):18inch/S','도자기','카페트/돗자리','장식품 (스탠딩)','조각','스피커',
+  '전기장판','램프','가습기','이불','거울','옷 & 의류','스탠드',
+  '컴퓨터','프린터','LP, CD, DVD','레고,Figure','책','문구류 및 잡화','서류 및 파일',
+  '그릇','전기밥솥','커피머신','냄비','부엌잡화','주방기구','전자레인지','정수기','교자상','식기세척기','식기건조기',
+  '전기히터','진공청소기','선풍기','PVC 박스','스키.스노보드','자전거','골프용품','볼링용품','인라인 스케이트','스케이트','킥보드','낚시용품','등산용품','병풍','재봉틀','항아리','청소도구','신발','욕실용품','캠핑장비',
+];
+const QTY_SET = new Set(QTY_LABELS.map(norm));
+const SIZE_DATA = {
+  '도자기': 'S',
+  '카페트/돗자리': 'M',
+  '장식품스탠딩': 'S',
+  '조각': 'S',
+  '액자대72inch/lx2': 'M',
+  '스피커': 'S',
+  '액자중36inch/m': 'S',
+  '액자소18inch/s': 'S',
+  '램프': 'S',
+  '옷의류': 'M',
+  '전기장판': 'M',
+  '스탠드': 'S',
+  '가습기': 'S',
+  '이불': 'L',
+  '거울': 'S',
+  '책': 'S',
+  '문구류및잡화': 'S',
+  '컴퓨터': 'S',
+  'lpcddvd': 'S',
+  '서류및파일': 'S',
+  '프린터': 'S',
+  '레고figure': 'S',
+  '그릇': 'S',
+  '전자레인지': 'M',
+  '전기밥솥': 'S',
+  '정수기': 'S',
+  '커피머신': 'S',
+  '교자상': 'S',
+  '냄비': 'S',
+  '식기세척기': 'M',
+  '부엌잡화': 'S',
+  '식기건조기': 'M',
+  '주방기구': 'S',
+  'pvc박스': 'S',
+  '스케이트': 'S',
+  '항아리': 'S',
+  '스키스노보드': 'S',
+  '킥보드': 'M',
+  '청소도구': 'S',
+  '자전거': 'M',
+  '낚시용품': 'S',
+  '신발': 'M',
+  '전기히터': 'S',
+  '골프용품': 'S',
+  '등산용품': 'S',
+  '욕실용품': 'S',
+  '진공청소기': 'S',
+  '볼링용품': 'S',
+  '병풍': 'M',
+  '캠핑장비': 'S',
+  '선풍기': 'S',
+  '인라인스케이트': 'S',
+  '재봉틀': 'S',
+};
+SECTIONS.forEach(sec=>{
+  sec.items.forEach(it=>{ it.mode = QTY_SET.has(norm(it.label)) ? 'qty' : 'photo'; });
+});
+
+// ===== 예상 견적 자동계산 엔진 =====
+// 고객 ZIP코드를 좌표로 바꾼 뒤, 아래 도시 목록 중 (도시 좌표 기준 반경 이내에 있는) 도시를 찾아
+// 그 도시의 할증금액을 적용하는 방식입니다. 예전의 "창고까지 거리(마일)" 기반 계산을 대체합니다.
+// 기준 3 CBM 가격(도시 할증 전)
+const BASE_PRICE_3CBM = 2000;
+
+// 도시 목록은 리키님이 작성하신 "도시별_할증_기준표.xlsx"를 그대로 옮긴 것입니다.
+// radius: 이 도시 좌표로부터 몇 마일 이내를 같은 요금으로 볼지, add: 그 지역 할증 금액($)
+const CITY_SURCHARGES = [
+  {city:'로스앤젤레스(LA 한인타운)', state:'CA', zip:'90005', lat:33.7866, lng:-118.2987, radius:20, add:0},
+  {city:'부에나파크/풀러턴', state:'CA', zip:'90621', lat:33.6403, lng:-117.7694, radius:20, add:0},
+  {city:'얼바인', state:'CA', zip:'92602', lat:33.718, lng:-117.7222, radius:20, add:0},
+  {city:'세리토스/라미라다', state:'CA', zip:'90703', lat:33.8669, lng:-118.0686, radius:30, add:0},
+  {city:'토런스/가디나', state:'CA', zip:'90503', lat:33.7866, lng:-118.2987, radius:40, add:0},
+  {city:'샌디에이고', state:'CA', zip:'92101', lat:32.7211, lng:-117.1744, radius:40, add:250},
+  {city:'샌프란시스코', state:'CA', zip:'94102', lat:37.7793, lng:-122.4166, radius:30, add:100},
+  {city:'산호세', state:'CA', zip:'95112', lat:37.37, lng:-121.8921, radius:30, add:100},
+  {city:'새크라멘토', state:'CA', zip:'95814', lat:38.5791, lng:-121.4809, radius:30, add:300},
+  {city:'시애틀/페더럴웨이', state:'WA', zip:'98003', lat:47.4323, lng:-121.8034, radius:40, add:100},
+  {city:'타코마', state:'WA', zip:'98402', lat:47.2615, lng:-122.4633, radius:40, add:250},
+  {city:'포틀랜드', state:'OR', zip:'97201', lat:45.4989, lng:-122.6932, radius:40, add:600},
+  {city:'유진', state:'OR', zip:'97401', lat:44.1179, lng:-123.0742, radius:40, add:900},
+  {city:'BOISE', state:'ID', zip:'83702', lat:43.662, lng:-116.195, radius:40, add:1500},
+  {city:'리노', state:'NV', zip:'89501', lat:39.6556, lng:-119.7046, radius:40, add:1300},
+  {city:'라스베가스', state:'NV', zip:'89101', lat:36.1737, lng:-115.1065, radius:40, add:1600},
+  {city:'피닉스', state:'AZ', zip:'85001', lat:33.704, lng:-112.3518, radius:40, add:1600},
+  {city:'투싼', state:'AZ', zip:'85701', lat:32.218, lng:-110.9709, radius:40, add:1800},
+  {city:'솔트레익시티', state:'UT', zip:'84101', lat:40.7561, lng:-111.9007, radius:40, add:1900},
+  {city:'덴버', state:'CO', zip:'80202', lat:39.7602, lng:-104.9966, radius:40, add:1900},
+  {city:'포트 콜린스', state:'CO', zip:'80521', lat:40.5923, lng:-105.2983, radius:40, add:2000},
+  {city:'콜로라드 스프링', state:'CO', zip:'80903', lat:38.8289, lng:-104.8099, radius:40, add:1800},
+  {city:'알버쿠키', state:'NM', zip:'87102', lat:35.0693, lng:-106.6485, radius:40, add:2100},
+  {city:'호놀룰루(오아후)', state:'HI', zip:'96813', lat:24.8598, lng:-168.0218, radius:40, add:1850},
+  {city:'시카고 다운타운', state:'IL', zip:'60601', lat:41.8119, lng:-87.6873, radius:10, add:200},
+  {city:'에반스톤', state:'IL', zip:'60201', lat:42.0491, lng:-87.7022, radius:10, add:200},
+  {city:'시카고 서버브', state:'IL', zip:'60630', lat:41.8119, lng:-87.6873, radius:30, add:0},
+  {city:'네이퍼빌', state:'IL', zip:'60540', lat:41.759, lng:-88.1524, radius:30, add:100},
+  {city:'샴페인', state:'IL', zip:'61820', lat:40.1018, lng:-88.1972, radius:30, add:450},
+  {city:'블루밍턴', state:'IN', zip:'47401', lat:39.0788, lng:-86.4351, radius:30, add:450},
+  {city:'샌루이스', state:'MO', zip:'63101', lat:38.6315, lng:-90.1923, radius:30, add:550},
+  {city:'아이오와 시티', state:'IA', zip:'52240', lat:41.6482, lng:-91.5416, radius:30, add:950},
+  {city:'데스 모이네스', state:'IA', zip:'50309', lat:41.5841, lng:-93.6203, radius:30, add:1100},
+  {city:'위스칸신', state:'WI', zip:'53703', lat:43.0531, lng:-89.3528, radius:30, add:600},
+  {city:'인디아나폴리스', state:'IN', zip:'46204', lat:39.7727, lng:-86.158, radius:30, add:550},
+  {city:'클리브랜드', state:'OH', zip:'44113', lat:41.4738, lng:-81.643, radius:30, add:1100},
+  {city:'톨래도', state:'OH', zip:'43604', lat:41.6558, lng:-83.5368, radius:40, add:900},
+  {city:'신시내티', state:'OH', zip:'45202', lat:39.1103, lng:-84.4861, radius:30, add:900},
+  {city:'미니애폴리스', state:'MN', zip:'55401', lat:44.9793, lng:-93.273, radius:40, add:800},
+  {city:'디트로이트/앤아버', state:'MI', zip:'48104', lat:42.2709, lng:-83.7278, radius:50, add:750},
+  {city:'그랜드 래피즈', state:'MI', zip:'49503', lat:42.9562, lng:-85.6607, radius:40, add:600},
+  {city:'랜싱', state:'MI', zip:'48933', lat:42.7314, lng:-84.5537, radius:40, add:700},
+  {city:'콜럼버스', state:'OH', zip:'43085', lat:40.0401, lng:-82.8972, radius:40, add:1100},
+  {city:'캔자스시티', state:'MO', zip:'64105', lat:39.1027, lng:-94.595, radius:40, add:1400},
+  {city:'댈러스/캐롤턴', state:'TX', zip:'75007', lat:33.0074, lng:-96.8959, radius:40, add:0},
+  {city:'샌안토니오', state:'TX', zip:'78205', lat:29.4241, lng:-98.4841, radius:40, add:900},
+  {city:'휴스턴', state:'TX', zip:'77036', lat:29.834, lng:-95.4342, radius:40, add:1200},
+  {city:'오스틴', state:'TX', zip:'78701', lat:30.2683, lng:-97.7414, radius:40, add:700},
+  {city:'바톤 로그', state:'LA', zip:'70801', lat:30.4492, lng:-91.1856, radius:50, add:1400},
+  {city:'애틀랜타/둘루스/스와니', state:'GA', zip:'30096', lat:33.9845, lng:-84.1529, radius:40, add:100},
+  {city:'웨스트포인트(기아공장)', state:'GA', zip:'31833', lat:32.9073, lng:-85.0775, radius:40, add:0},
+  {city:'ATHENS', state:'GA', zip:'30601', lat:33.9929, lng:-83.3537, radius:30, add:300},
+  {city:'콜럼버스', state:'GA', zip:'31901', lat:32.4729, lng:-84.9782, radius:30, add:400},
+  {city:'메이콘', state:'GA', zip:'31201', lat:32.8279, lng:-83.5951, radius:30, add:400},
+  {city:'멤피스', state:'TN', zip:'38103', lat:35.1549, lng:-90.0496, radius:30, add:850},
+  {city:'헌츠빌', state:'AL', zip:'35801', lat:34.7184, lng:-86.5564, radius:30, add:300},
+  {city:'낙스빌', state:'TN', zip:'37902', lat:35.945, lng:-83.8758, radius:30, add:400},
+  {city:'버밍헴', state:'AL', zip:'35203', lat:33.5192, lng:-86.8079, radius:30, add:300},
+  {city:'스타크빌', state:'MS', zip:'39759', lat:33.4255, lng:-88.8791, radius:30, add:550},
+  {city:'엔터프라이즈', state:'AL', zip:'36330', lat:31.3158, lng:-85.943, radius:30, add:800},
+  {city:'몽고메리(현대공장)', state:'AL', zip:'36104', lat:32.3738, lng:-86.2892, radius:40, add:500},
+  {city:'내슈빌', state:'TN', zip:'37201', lat:36.1657, lng:-86.7781, radius:40, add:550},
+  {city:'그린스빌', state:'NC', zip:'27834', lat:35.631, lng:-77.381, radius:40, add:600},
+  {city:'샬럿', state:'NC', zip:'28202', lat:35.2262, lng:-80.8435, radius:40, add:800},
+  {city:'콜럼비아', state:'SC', zip:'29201', lat:33.9875, lng:-81.0249, radius:40, add:800},
+  {city:'올랜도', state:'FL', zip:'32801', lat:28.5452, lng:-81.3733, radius:40, add:900},
+  {city:'마이애미', state:'FL', zip:'33101', lat:25.7791, lng:-80.1978, radius:40, add:1400},
+  {city:'탈라하시', state:'FL', zip:'32301', lat:30.4185, lng:-84.2034, radius:40, add:650},
+  {city:'잭슨빌', state:'FL', zip:'32202', lat:30.3284, lng:-81.656, radius:40, add:700},
+  {city:'뉴욕(맨하탄)', state:'NY', zip:'10001', lat:40.7504, lng:-73.9963, radius:10, add:300},
+  {city:'플러싱/퀸즈', state:'NY', zip:'11354', lat:40.7664, lng:-73.8262, radius:20, add:200},
+  {city:'버팔로', state:'NY', zip:'14202', lat:42.8897, lng:-78.8842, radius:40, add:1300},
+  {city:'시라큐스', state:'NY', zip:'13202', lat:43.0431, lng:-76.1508, radius:40, add:900},
+  {city:'로체스터', state:'NY', zip:'14604', lat:43.1566, lng:-77.604, radius:40, add:1100},
+  {city:'알바니', state:'NY', zip:'12207', lat:42.656, lng:-73.7508, radius:40, add:700},
+  {city:'뉴헤이븐', state:'CT', zip:'06510', lat:41.3098, lng:-72.9223, radius:30, add:300},
+  {city:'하트포드', state:'CT', zip:'06103', lat:41.7663, lng:-72.6746, radius:30, add:400},
+  {city:'포트리/팰리세이즈파크', state:'NJ', zip:'07024', lat:40.8487, lng:-73.974, radius:40, add:100},
+  {city:'필라델피아', state:'PA', zip:'19102', lat:39.9526, lng:-75.1665, radius:40, add:250},
+  {city:'핏츠버그', state:'PA', zip:'15222', lat:40.4344, lng:-80.0248, radius:40, add:1000},
+  {city:'해리스버그', state:'PA', zip:'17101', lat:40.2646, lng:-76.8696, radius:40, add:550},
+  {city:'보스턴', state:'MA', zip:'02108', lat:42.3538, lng:-71.1024, radius:40, add:600},
+  {city:'애난데일/페어팩스', state:'VA', zip:'22003', lat:38.8358, lng:-77.2128, radius:40, add:450},
+  {city:'워싱턴 D.C.', state:'DC', zip:'20001', lat:38.9119, lng:-77.0167, radius:40, add:550},
+  {city:'락빌', state:'MD', zip:'20850', lat:39.0896, lng:-77.1841, radius:40, add:600},
+];
+const DEST_RATES = {
+  '수도권':0, '강원도':150, '충청남도':250, '충청북도':150,
+  '전라북도':350, '전라남도':450, '경상북도':400, '경상남도':450, '제주도':1100,
+};
+
+// 수량체크 항목(생활잔짐)의 부피는 사진이 없어 정확한 CBM을 모르니, 업계 표준 이사 박스 부피로 근사합니다.
+const BOX_CBM = {L:0.127, M:0.085, S:0.054};
+
+// 견적서(PDF)용 수량체크 박스의 실제 규격 — 가로/세로/높이(inch), 개당 실포장CBM, 개당 적재CBM
+const BOX_DIM = {
+  L: {label:'이불 (L)박스',      w:26, d:20, h:20, real:0.318737741, load:0.579465213},
+  M: {label:'의류&정장 (m)박스', w:25, d:17, h:16, real:0.174971417, load:0.300600895},
+  S: {label:'책&그릇 (s)박스',   w:22, d:14, h:12, real:0.095102111, load:0.163385427},
+};
+
+function haversineMiles(lat1, lon1, lat2, lon2){
+  const R = 3958.8;
+  const toRad = d => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1);
+  const dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function geocodeZip(zip){
+  try{
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const place = data.places && data.places[0];
+    if(!place) return null;
+    return {lat: parseFloat(place.latitude), lng: parseFloat(place.longitude)};
+  }catch(err){
+    console.error('geocode failed', err);
+    return null;
+  }
+}
+
+// 고객 좌표에서 반경 안에 들어오는 도시들을 모두 찾고, 겹치는 경우 할증금액이 더 높은 도시를 우선 적용
+function findCitySurcharge(lat, lng){
+  const matches = CITY_SURCHARGES
+    .map(c => ({...c, dist: haversineMiles(lat, lng, c.lat, c.lng)}))
+    .filter(c => c.dist <= c.radius);
+  if(matches.length === 0) return null;
+  matches.sort((a,b) => b.add - a.add || a.dist - b.dist); // 할증 높은 순 우선, 동률이면 더 가까운 쪽
+  return matches[0];
+}
+
+function residenceSurcharge(){
+  return state.customer.floorCategory === 'elevNo' ? 200 : 0;
+}
+
+function computeTotalCbm(){
+  let total = 0;
+  state.items.forEach(it=>{
+    const cat = findCat(it.catId);
+    if(!cat) return;
+    if(cat.mode === 'qty'){
+      const size = SIZE_DATA[norm(it.label)] || 'S';
+      total += (BOX_CBM[size] || BOX_CBM.S) * (it.qty || 0);
+    }else{
+      total += effectiveCbm(it, cat);
+    }
+  });
+  return total;
+}
+
+function additionalCbmCost(totalCbm){
+  if(totalCbm <= 3) return 0;
+  const extra = totalCbm - 3;
+  const rate = totalCbm < 7 ? 350 : 300; // 7 CBM 미만이면 추가 1 CBM당 $350, 7 이상이면 $300
+  return extra * rate;
+}
+
+// main entry point: returns either {contactNeeded:true, ...} or a full breakdown
+// ZIP → 도시매칭 → 도착지/거주형태 할증까지 묶어서 계산하는 공용 헬퍼.
+// PDF 견적서(페이지별로 총 부피가 다름)와 화면상 견적 계산이 같은 로직을 쓰도록 분리함.
+async function getPricingContext(){
+  const geo = await geocodeZip(state.customer.zip);
+  if(!geo){
+    return {error: true, message: 'ZIP 코드를 확인할 수 없어요. 다시 확인해 주세요.'};
+  }
+  const matchedCity = findCitySurcharge(geo.lat, geo.lng);
+  if(!matchedCity){
+    return {contactNeeded: true, geo};
+  }
+  const destRate = DEST_RATES[state.customer.dest] || 0;
+  const resSurcharge = residenceSurcharge();
+  return {matchedCity, destRate, resSurcharge};
+}
+
+// 한국 도착지역 할증 + 거주형태(엘리베이터) 할증은 모두 "기본 3큐빅" 금액에 합쳐서 표시함
+function priceForVolume(totalCbm, ctx){
+  const combinedBase = BASE_PRICE_3CBM + ctx.matchedCity.add + ctx.destRate + ctx.resSurcharge;
+  const cbmCost = additionalCbmCost(totalCbm);
+  return {combinedBase, cbmCost, total: combinedBase + cbmCost, extraRate: totalCbm < 7 ? 350 : 300};
+}
+
+async function calculateEstimate(){
+  const ctx = await getPricingContext();
+  if(ctx.error || ctx.contactNeeded) return ctx;
+  const totalCbm = computeTotalCbm();
+  const priced = priceForVolume(totalCbm, ctx);
+  return {
+    total: priced.total, matchedCity: ctx.matchedCity, totalCbm,
+    breakdown: {baseRate: BASE_PRICE_3CBM, cityAdd: ctx.matchedCity.add, cityName: ctx.matchedCity.city, destRate: ctx.destRate, resSurcharge: ctx.resSurcharge, cbmCost: priced.cbmCost},
+  };
+}
+
+
+function findCat(id){
+  for(const sec of SECTIONS){
+    const found = sec.items.find(it=>it.id===id);
+    if(found) return found;
+  }
+  return null;
+}
+
+function deleteLastPhoto(cat){
+  const idx = state.items.map(i=>i.catId).lastIndexOf(cat.id);
+  if(idx === -1) return;
+  state.items.splice(idx, 1);
+  renderTabs();
+  renderItemList();
+  updateBar2();
+}
+
+function updateQty(cat, delta){
+  let entry = state.items.find(i=>i.catId===cat.id && i.isQty);
+  if(!entry){
+    if(delta<=0) return;
+    entry = {catId:cat.id, label:cat.label, isQty:true, qty:0, photo:null};
+    state.items.push(entry);
+  }
+  entry.qty = Math.max(0, entry.qty + delta);
+  if(entry.qty===0){
+    state.items = state.items.filter(i=>i!==entry);
+  }
+  renderTabs();
+  renderItemList();
+  updateBar2();
+}
+
+async function sendEmailWithRetry(serviceId, templateId, params, retries=4){
+  for(let attempt=0; attempt<=retries; attempt++){
+    try{
+      await emailjs.send(serviceId, templateId, params);
+      return true;
+    }catch(err){
+      console.error(`email send failed (attempt ${attempt+1}/${retries+1})`, err);
+      if(attempt < retries){
+        const delayMs = 1500 * (attempt + 1); // 1.5s, 3s, 4.5s, 6s — back off a bit more each time
+        await new Promise(r=>setTimeout(r, delayMs));
+      }
+    }
+  }
+  return false;
+}
+
+function cbmRange(base){
+  const low = (base*0.7).toFixed(3);
+  const high = (base*1.15).toFixed(3);
+  return {low, high};
+}
+
+function effectiveCbm(it, cat){
+  let base = (cat?.needsAssembly && it.assembly==='O') ? it.cbm*0.6 : it.cbm;
+  if(it.sizeTier){
+    const pct = TIER_PERCENT[String(it.sizeTier)];
+    if(pct !== undefined){
+      base = base * (1 + pct/100);
+    }
+  }
+  return Math.max(base, 0.01);
+}
+
+const state = {
+  customer:{name:'',email:'',zip:'',dest:'',packingDate:'',floorCategory:''},
+  items:[] // {catId,label,min,max,cuft,note,photo}
+};
+let activeCatId = null;
+let customSlots = [null, null]; // each entry: null (empty "사진찍기" box) or {photo, cloudUrl}
+let customNote = '';
+let activeCustomSlotIndex = null;
+
+// ---------- step nav ----------
+let currentStep = 1;
+function goStep(n){
+  if(currentStep === 2 && n !== 2 && typeof stopCameraStream === 'function'){
+    stopCameraStream(); // 물품촬영 단계를 벗어나면 카메라를 꺼서 배터리/개인정보를 보호 (다시 이 단계로 오면 최초 1회만 다시 권한을 물어봄)
+  }
+  currentStep = n;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+n).classList.add('active');
+  document.querySelectorAll('.step-dot').forEach(d=>{
+    const s = parseInt(d.dataset.step);
+    d.classList.toggle('active', s===n);
+    d.classList.toggle('done', s<n);
+    // 완료된(지나온) 단계이고, 아직 제출 전(4단계 진입 전)일 때만 클릭으로 되돌아갈 수 있음
+    d.classList.toggle('clickable', s<n && n<4);
+  });
+  for(let i=1;i<=3;i++) document.getElementById('bar-'+i).style.display = (i===n)?'block':'none';
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.step-dot').forEach(d=>{
+  d.addEventListener('click', ()=>{
+    const target = parseInt(d.dataset.step);
+    if(d.classList.contains('clickable') && target < currentStep){
+      goStep(target);
+    }
+  });
+});
+
+// ---------- STEP 1 ----------
+const fields = [
+  {key:'name', id:'in-name', wrap:'f-name', validate:v=>v.trim().length>=2},
+  {key:'email', id:'in-email', wrap:'f-email', validate:v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())},
+  {key:'zip', id:'in-zip', wrap:'f-zip', validate:v=>/^\d{5}$/.test(v.trim())},
+  {key:'dest', id:'in-dest', wrap:'f-dest', validate:v=>v.trim().length>=2},
+  {key:'packingDate', id:'in-packing-date', wrap:'f-packing-date', validate:v=>v.trim().length>0},
+  {key:'floorCategory', id:'in-floor', wrap:'f-floor', validate:v=>v.trim().length>0},
+];
+
+// ---------- 포장 희망 일자: 커스텀 달력 ----------
+const today = new Date();
+today.setHours(0,0,0,0);
+let calViewYear = today.getFullYear();
+let calViewMonth = today.getMonth(); // 0-11
+let calSelectedDate = null; // Date object
+
+const WEEKDAY_NAMES = ['일','월','화','수','목','금','토'];
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toIso(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function toDisplay(d){ return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`; }
+
+function renderCalendar(){
+  document.getElementById('cal-month-label').textContent = `${calViewYear}년 ${calViewMonth+1}월`;
+  const isCurrentMonth = (calViewYear===today.getFullYear() && calViewMonth===today.getMonth());
+  document.getElementById('cal-prev').disabled = isCurrentMonth;
+
+  const firstDay = new Date(calViewYear, calViewMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+
+  const grid = document.getElementById('cal-grid');
+  let html = '';
+  for(let i=0; i<firstDay; i++){
+    html += `<div class="cal-day empty"></div>`;
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(calViewYear, calViewMonth, day);
+    const isPast = d < today;
+    const isToday = d.getTime() === today.getTime();
+    const isSelected = calSelectedDate && d.getTime() === calSelectedDate.getTime();
+    const dow = d.getDay(); // 0=Sun, 6=Sat
+    const cls = ['cal-day'];
+    if(isToday) cls.push('today');
+    if(isSelected) cls.push('selected');
+    if((dow===0 || dow===6) && !isSelected) cls.push('weekend');
+    html += `<button type="button" class="${cls.join(' ')}" data-date="${toIso(d)}" ${isPast?'disabled':''}>${day}</button>`;
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.cal-day:not(.empty):not(:disabled)').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const [y,m,dd] = btn.dataset.date.split('-').map(Number);
+      calSelectedDate = new Date(y, m-1, dd);
+      document.getElementById('in-packing-date').value = toIso(calSelectedDate);
+      const textEl = document.getElementById('in-packing-date-text');
+      textEl.textContent = toDisplay(calSelectedDate);
+      document.getElementById('in-packing-date-display').classList.remove('placeholder');
+      closeCalendar();
+    });
+  });
+}
+
+function openCalendar(){
+  if(calSelectedDate){
+    calViewYear = calSelectedDate.getFullYear();
+    calViewMonth = calSelectedDate.getMonth();
+  }
+  renderCalendar();
+  document.getElementById('cal-overlay').classList.add('show');
+}
+function closeCalendar(){
+  document.getElementById('cal-overlay').classList.remove('show');
+}
+
+document.getElementById('in-packing-date-display').addEventListener('click', openCalendar);
+document.getElementById('in-packing-date-display').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openCalendar(); }
+});
+
+function changeMonth(direction){
+  // direction: 1 = 다음달(왼쪽으로 슬라이드 아웃, 오른쪽에서 새 달 슬라이드 인), -1 = 이전달(반대)
+  const grid = document.getElementById('cal-grid');
+  const outClass = direction>0 ? 'slide-out-left' : 'slide-out-right';
+  const inFromClass = direction>0 ? 'slide-out-right' : 'slide-out-left';
+  grid.classList.add(outClass);
+  setTimeout(()=>{
+    if(direction>0){
+      calViewMonth++;
+      if(calViewMonth>11){ calViewMonth=0; calViewYear++; }
+    }else{
+      calViewMonth--;
+      if(calViewMonth<0){ calViewMonth=11; calViewYear--; }
+    }
+    renderCalendar();
+    const newGrid = document.getElementById('cal-grid');
+    newGrid.classList.remove(outClass);
+    newGrid.classList.add('slide-prep', inFromClass);
+    void newGrid.offsetWidth; // 강제 리플로우로 즉시 반영
+    newGrid.classList.remove('slide-prep', inFromClass);
+  }, 170);
+}
+
+document.getElementById('cal-prev').addEventListener('click', ()=> changeMonth(-1));
+document.getElementById('cal-next').addEventListener('click', ()=> changeMonth(1));
+
+// 좌우 스와이프로 달 이동
+(function(){
+  const popup = document.getElementById('cal-popup');
+  let touchStartX = null, touchStartY = null;
+  popup.addEventListener('touchstart', (e)=>{
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  popup.addEventListener('touchend', (e)=>{
+    if(touchStartX===null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    touchStartX = null;
+    if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    if(dx < 0){
+      changeMonth(1);
+    }else{
+      const isCurrentMonth = (calViewYear===today.getFullYear() && calViewMonth===today.getMonth());
+      if(isCurrentMonth) return;
+      changeMonth(-1);
+    }
+  }, {passive:true});
+})();
+document.getElementById('cal-close').addEventListener('click', closeCalendar);
+document.getElementById('cal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id==='cal-overlay') closeCalendar();
+});
+
+document.getElementById('btn-1-next').addEventListener('click', async ()=>{
+  document.querySelector('#f-zip .err-msg').textContent = '5자리 ZIP CODE를 입력해 주세요.';
+  let allValid = true;
+  fields.forEach(f=>{
+    const val = document.getElementById(f.id).value;
+    const ok = f.validate(val);
+    document.getElementById(f.wrap).classList.toggle('error', !ok);
+    if(!ok) allValid = false; else state.customer[f.key] = val.trim();
+  });
+
+  if(!allValid){
+    document.getElementById('s1-banner').classList.add('show');
+    return;
+  }
+
+  // ZIP 형식은 맞아도 실존하는 ZIP인지 실시간으로 확인
+  const btn = document.getElementById('btn-1-next');
+  const originalLabel = btn.textContent;
+  btn.textContent = 'ZIP 코드 확인 중...';
+  btn.disabled = true;
+  const zipReal = await verifyZipExists(state.customer.zip);
+  btn.textContent = originalLabel;
+  btn.disabled = false;
+
+  if(zipReal === false){
+    document.getElementById('f-zip').classList.add('error');
+    document.getElementById('f-zip').querySelector('.err-msg').textContent = '실제 존재하는 ZIP 코드가 아니에요. 다시 확인해 주세요.';
+    document.getElementById('s1-banner').classList.add('show');
+    return;
+  }
+
+  document.getElementById('s1-banner').classList.remove('show');
+  goStep(2);
+});
+
+async function verifyZipExists(zip){
+  try{
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    return res.ok; // 404 등이면 false -> 실제 없는 zip
+  }catch(err){
+    console.error('zip verify failed (network) — allowing through', err);
+    return true; // 네트워크 오류 시엔 정상 진행 막지 않음
+  }
+}
+
+// ---------- STEP 2 : section tabs + list ----------
+let activeSectionId = SECTIONS[0].id;
+let searchTerm = '';
+
+const tabsEl = document.getElementById('sec-tabs');
+function sectionPhotoCount(secId){
+  return state.items.filter(i=>findCat(i.catId)?.sectionId===secId).length;
+}
+const TAB_ICONS = {living:'sofa', bedroom:'bed', study:'book-open', kitchen:'utensils', utility:'box', custom:'pencil'};
+function renderTabs(){
+  const allTabs = [...SECTIONS, {id:'custom', name:'직접입력'}];
+  tabsEl.innerHTML = allTabs.map(sec=>`
+    <div class="sec-tab ${sec.id===activeSectionId?'active':''}" data-sec="${sec.id}">${sec.name}</div>
+  `).join('');
+  tabsEl.querySelectorAll('.sec-tab').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      activeSectionId = el.dataset.sec;
+      renderTabs();
+      renderItemList();
+    });
+  });
+}
+
+const ICONS = {
+  'archive': '<rect x=\'3\' y=\'4\' width=\'18\' height=\'4\' rx=\'1\'/><path d=\'M4 8v10a2 2 0 002 2h12a2 2 0 002-2V8\'/><line x1=\'10\' y1=\'13\' x2=\'14\' y2=\'13\'/>',
+  'armchair': '<path d=\'M5 11V7a3 3 0 016 0v1h2V7a3 3 0 016 0v4\'/><path d=\'M4 11h16v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z\'/><line x1=\'6\' y1=\'18\' x2=\'6\' y2=\'20\'/><line x1=\'18\' y1=\'18\' x2=\'18\' y2=\'20\'/>',
+  'baby': '<circle cx=\'12\' cy=\'7\' r=\'3\'/><path d=\'M7 21c0-4 2-7 5-7s5 3 5 7\'/>',
+  'bed': '<rect x=\'2\' y=\'11\' width=\'20\' height=\'7\' rx=\'1.5\'/><path d=\'M4 11V8a2 2 0 012-2h5a2 2 0 012 2v3\'/><rect x=\'4.5\' y=\'7\' width=\'4\' height=\'2.4\' rx=\'1\'/><line x1=\'2\' y1=\'18\' x2=\'2\' y2=\'20.5\'/><line x1=\'22\' y1=\'18\' x2=\'22\' y2=\'20.5\'/>',
+  'bed-double': '<path d=\'M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6\'/><path d=\'M3 18v2M21 18v2\'/><path d=\'M3 12V9a2 2 0 012-2h4a2 2 0 012 2v3\'/><line x1=\'11\' y1=\'12\' x2=\'21\' y2=\'12\'/><line x1=\'12\' y1=\'10\' x2=\'12\' y2=\'18\'/>',
+  'bed-single': '<path d=\'M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6\'/><path d=\'M3 18v2M21 18v2\'/><path d=\'M3 12V9a2 2 0 012-2h4a2 2 0 012 2v3\'/><line x1=\'11\' y1=\'12\' x2=\'21\' y2=\'12\'/>',
+  'bike': '<circle cx=\'6\' cy=\'17\' r=\'3.2\'/><circle cx=\'18\' cy=\'17\' r=\'3.2\'/><path d=\'M6 17l4-9h4l3 9M10 8h3M13 8l3 5\'/>',
+  'book': '<path d=\'M5 4h11a2 2 0 012 2v14H7a2 2 0 01-2-2V4z\'/><line x1=\'7\' y1=\'4\' x2=\'7\' y2=\'20\'/>',
+  'book-open': '<path d=\'M12 6c-1.5-1.5-4-2-7-2v13c3 0 5.5.5 7 2 1.5-1.5 4-2 7-2V4c-3 0-5.5.5-7 2z\'/><line x1=\'12\' y1=\'6\' x2=\'12\' y2=\'19\'/>',
+  'box': '<path d=\'M3 8l9-5 9 5-9 5-9-5z\'/><path d=\'M3 8v9l9 5 9-5V8\'/><line x1=\'12\' y1=\'13\' x2=\'12\' y2=\'22\'/>',
+  'coffee': '<path d=\'M4 8h13v6a5 5 0 01-5 5H9a5 5 0 01-5-5V8z\'/><path d=\'M17 9h1.5a2.5 2.5 0 010 5H17\'/><line x1=\'7\' y1=\'3\' x2=\'7\' y2=\'5\'/><line x1=\'11\' y1=\'3\' x2=\'11\' y2=\'5\'/>',
+  'disc': '<circle cx=\'12\' cy=\'12\' r=\'9\'/><circle cx=\'12\' cy=\'12\' r=\'2.5\'/>',
+  'droplets': '<path d=\'M12 3s5 6 5 10a5 5 0 01-10 0c0-4 5-10 5-10z\'/>',
+  'dumbbell': '<line x1=\'3\' y1=\'12\' x2=\'21\' y2=\'12\'/><rect x=\'1.5\' y=\'9\' width=\'3\' height=\'6\' rx=\'1\'/><rect x=\'19.5\' y=\'9\' width=\'3\' height=\'6\' rx=\'1\'/><rect x=\'6\' y=\'10.2\' width=\'2\' height=\'3.6\' rx=\'0.6\'/><rect x=\'16\' y=\'10.2\' width=\'2\' height=\'3.6\' rx=\'0.6\'/>',
+  'fan': '<circle cx=\'12\' cy=\'12\' r=\'1.4\'/><path d=\'M12 12c0-3 2-7 5-7s2 5-1 7\'/><path d=\'M12 12c-3 0-7-2-7-5s5-2 7 1\'/><path d=\'M12 12c0 3-2 7-5 7s-2-5 1-7\'/><path d=\'M12 12c3 0 7 2 7 5s-5 2-7-1\'/>',
+  'fish': '<path d=\'M3 12s4-5 11-5 7 5 7 5-1 5-7 5-11-5-11-5z\'/><circle cx=\'16\' cy=\'10.5\' r=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><path d=\'M3 12L1 9M3 12l-2 3\'/>',
+  'flag': '<line x1=\'5\' y1=\'3\' x2=\'5\' y2=\'21\'/><path d=\'M5 4h11l-2 4 2 4H5\'/>',
+  'flame': '<path d=\'M12 2c1 4-3 5-3 9a4 4 0 008 0c0-2-1-3-2-4 1 3-1 4-2 4-2 0-3-2-3-4 0-3 3-4 2-5z\'/>',
+  'folder': '<path d=\'M3 6a1 1 0 011-1h5l2 2h9a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V6z\'/>',
+  'footprints': '<ellipse cx=\'9\' cy=\'8\' rx=\'2\' ry=\'3\'/><ellipse cx=\'16\' cy=\'16\' rx=\'2\' ry=\'3\'/><circle cx=\'6.5\' cy=\'12.5\' r=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><circle cx=\'18.5\' cy=\'21\' r=\'0.6\' fill=\'currentColor\' stroke=\'none\'/>',
+  'image': '<rect x=\'3\' y=\'4\' width=\'18\' height=\'16\' rx=\'2\'/><circle cx=\'8.5\' cy=\'9.5\' r=\'1.5\'/><path d=\'M21 16l-5-5-4 4-2-2-6 6\'/>',
+  'lamp': '<path d=\'M6 4h12l-2 8H8L6 4z\'/><line x1=\'12\' y1=\'12\' x2=\'12\' y2=\'19\'/><line x1=\'8\' y1=\'21\' x2=\'16\' y2=\'21\'/>',
+  'lamp-floor': '<path d=\'M8 3h8l-2 6H10L8 3z\'/><line x1=\'12\' y1=\'9\' x2=\'12\' y2=\'20\'/><line x1=\'8\' y1=\'21\' x2=\'16\' y2=\'21\'/>',
+  'landmark': '<line x1=\'4\' y1=\'21\' x2=\'20\' y2=\'21\'/><line x1=\'5\' y1=\'10\' x2=\'5\' y2=\'18\'/><line x1=\'9.5\' y1=\'10\' x2=\'9.5\' y2=\'18\'/><line x1=\'14.5\' y1=\'10\' x2=\'14.5\' y2=\'18\'/><line x1=\'19\' y1=\'10\' x2=\'19\' y2=\'18\'/><path d=\'M3 10l9-6 9 6z\'/>',
+  'laptop': '<rect x=\'4\' y=\'5\' width=\'16\' height=\'10\' rx=\'1\'/><path d=\'M2 19h20l-2-3H4l-2 3z\'/>',
+  'layout-grid': '<rect x=\'3\' y=\'3\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'14\' y=\'3\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'3\' y=\'14\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'14\' y=\'14\' width=\'7\' height=\'7\' rx=\'1\'/>',
+  'microwave': '<rect x=\'3\' y=\'6\' width=\'18\' height=\'12\' rx=\'1.5\'/><rect x=\'6\' y=\'9\' width=\'8\' height=\'6\' rx=\'0.5\'/><line x1=\'17\' y1=\'10\' x2=\'17\' y2=\'10.01\'/><line x1=\'17\' y1=\'13\' x2=\'17\' y2=\'13.01\'/><line x1=\'17\' y1=\'16\' x2=\'17\' y2=\'16.01\'/>',
+  'mountain': '<path d=\'M3 19l6-10 4 6 2-3 6 7z\'/>',
+  'package': '<path d=\'M3 8l9-5 9 5-9 5-9-5z\'/><path d=\'M3 8v9l9 5 9-5V8\'/><line x1=\'12\' y1=\'13\' x2=\'12\' y2=\'22\'/>',
+  'package-2': '<path d=\'M4 6l8-3 8 3-8 3-8-3z\'/><path d=\'M4 6v12l8 3 8-3V6\'/><line x1=\'12\' y1=\'9\' x2=\'12\' y2=\'21\'/>',
+  'pencil': '<path d=\'M4 20l1-4L16 5l3 3L8 19l-4 1z\'/><line x1=\'14\' y1=\'7\' x2=\'17\' y2=\'10\'/>',
+  'piano': '<rect x=\'3\' y=\'5\' width=\'18\' height=\'14\' rx=\'1\'/><line x1=\'7\' y1=\'5\' x2=\'7\' y2=\'14\'/><line x1=\'11\' y1=\'5\' x2=\'11\' y2=\'14\'/><line x1=\'15\' y1=\'5\' x2=\'15\' y2=\'14\'/><line x1=\'19\' y1=\'5\' x2=\'19\' y2=\'14\'/>',
+  'printer': '<path d=\'M6 9V4h12v5\'/><rect x=\'4\' y=\'9\' width=\'16\' height=\'7\' rx=\'1\'/><path d=\'M6 14h12v6H6z\'/>',
+  'puzzle': '<rect x=\'4\' y=\'4\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'13\' y=\'4\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'4\' y=\'13\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'13\' y=\'13\' width=\'7\' height=\'7\' rx=\'1\'/><circle cx=\'12\' cy=\'12\' r=\'1.6\' fill=\'currentColor\' stroke=\'none\'/>',
+  'refrigerator': '<rect x=\'6\' y=\'2\' width=\'12\' height=\'20\' rx=\'1.5\'/><line x1=\'6\' y1=\'9\' x2=\'18\' y2=\'9\'/><line x1=\'9\' y1=\'4.5\' x2=\'9\' y2=\'7\'/><line x1=\'9\' y1=\'11.5\' x2=\'9\' y2=\'14\'/>',
+  'rocking-chair': '<line x1=\'7\' y1=\'3\' x2=\'7\' y2=\'13\'/><line x1=\'15\' y1=\'3\' x2=\'15\' y2=\'13\'/><line x1=\'7\' y1=\'7\' x2=\'15\' y2=\'7\'/><line x1=\'6\' y1=\'13\' x2=\'16\' y2=\'13\'/><path d=\'M2 19c3-3 6-3 9 0M11 19c3-3 6-3 9 0\'/>',
+  'scissors': '<circle cx=\'6\' cy=\'6\' r=\'2.4\'/><circle cx=\'6\' cy=\'18\' r=\'2.4\'/><line x1=\'8\' y1=\'7.5\' x2=\'20\' y2=\'19\'/><line x1=\'8\' y1=\'16.5\' x2=\'20\' y2=\'5\'/>',
+  'shirt': '<path d=\'M8 4L4 7l2 3 2-1.5V21h8V8.5L18 10l2-3-4-3-2 2h-4l-2-2z\'/>',
+  'sofa': '<path d=\'M5 10V8a2 2 0 012-2h10a2 2 0 012 2v2\'/><path d=\'M3 12a2 2 0 012-2h14a2 2 0 012 2v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4z\'/><line x1=\'5\' y1=\'17\' x2=\'5\' y2=\'20\'/><line x1=\'19\' y1=\'17\' x2=\'19\' y2=\'20\'/>',
+  'soup': '<path d=\'M3 12a9 9 0 0018 0\'/><line x1=\'3\' y1=\'12\' x2=\'21\' y2=\'12\'/><path d=\'M8 8c0-2 1-3 1-3M12 7c0-2 1-4 1-4M16 8c0-2 1-3 1-3\'/>',
+  'sparkles': '<path d=\'M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z\'/><path d=\'M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z\'/>',
+  'speaker': '<rect x=\'6\' y=\'2\' width=\'12\' height=\'20\' rx=\'2\'/><circle cx=\'12\' cy=\'8\' r=\'2\'/><circle cx=\'12\' cy=\'16\' r=\'3.2\'/>',
+  'table': '<line x1=\'3\' y1=\'8\' x2=\'21\' y2=\'8\'/><path d=\'M3 8l2-4h14l2 4\'/><line x1=\'6\' y1=\'8\' x2=\'6\' y2=\'20\'/><line x1=\'18\' y1=\'8\' x2=\'18\' y2=\'20\'/>',
+  'tent': '<path d=\'M12 4l9 16H3L12 4z\'/><path d=\'M12 4v16\'/><path d=\'M7 20l5-9 5 9\'/>',
+  'tv': '<rect x=\'3\' y=\'5\' width=\'18\' height=\'12\' rx=\'1.5\'/><line x1=\'9\' y1=\'21\' x2=\'15\' y2=\'21\'/><line x1=\'12\' y1=\'17\' x2=\'12\' y2=\'21\'/>',
+  'utensils': '<path d=\'M6 3v7a2 2 0 002 2v9M6 3v7M9 3v7\'/><path d=\'M16 3c-1.5 0-2 2-2 4s.5 4 2 4V21\'/>',
+  'washing-machine': '<rect x=\'4\' y=\'3\' width=\'16\' height=\'18\' rx=\'1.5\'/><circle cx=\'12\' cy=\'13\' r=\'5\'/><circle cx=\'12\' cy=\'13\' r=\'2\'/><line x1=\'7\' y1=\'6\' x2=\'8\' y2=\'6\'/><line x1=\'10\' y1=\'6\' x2=\'11\' y2=\'6\'/>',
+  'wind': '<path d=\'M3 8h11a2.5 2.5 0 100-5\'/><path d=\'M3 13h15a2.5 2.5 0 110 5\'/><path d=\'M3 18h8\'/>',
+  'wardrobe': '<rect x=\'4\' y=\'3\' width=\'16\' height=\'18\' rx=\'1\'/><line x1=\'12\' y1=\'3\' x2=\'12\' y2=\'21\'/><circle cx=\'9\' cy=\'12\' r=\'0.7\' fill=\'currentColor\' stroke=\'none\'/><circle cx=\'15\' cy=\'12\' r=\'0.7\' fill=\'currentColor\' stroke=\'none\'/>',
+  'drawer-chest': '<rect x=\'4\' y=\'3\' width=\'16\' height=\'18\' rx=\'1\'/><line x1=\'4\' y1=\'9\' x2=\'20\' y2=\'9\'/><line x1=\'4\' y1=\'15\' x2=\'20\' y2=\'15\'/><rect x=\'10\' y=\'5.6\' width=\'4\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><rect x=\'10\' y=\'11.6\' width=\'4\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><rect x=\'10\' y=\'17.6\' width=\'4\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/>',
+  'console': '<rect x=\'2\' y=\'7\' width=\'20\' height=\'9\' rx=\'1\'/><line x1=\'7\' y1=\'11.5\' x2=\'17\' y2=\'11.5\'/><line x1=\'6\' y1=\'16\' x2=\'6\' y2=\'19\'/><line x1=\'18\' y1=\'16\' x2=\'18\' y2=\'19\'/>',
+  'vase': '<path d=\'M9 3h6l-1 3.2c1.6 1.1 2.5 2.9 2.5 4.8a4.5 4.5 0 01-9 0c0-1.9.9-3.7 2.5-4.8L9 3z\'/>',
+  'rug': '<rect x=\'3\' y=\'6\' width=\'18\' height=\'12\' rx=\'2\'/><line x1=\'7.5\' y1=\'6\' x2=\'7.5\' y2=\'18\'/><line x1=\'16.5\' y1=\'6\' x2=\'16.5\' y2=\'18\'/><line x1=\'3\' y1=\'4\' x2=\'3\' y2=\'6\'/><line x1=\'7.5\' y1=\'4\' x2=\'7.5\' y2=\'6\'/><line x1=\'12\' y1=\'4\' x2=\'12\' y2=\'6\'/><line x1=\'16.5\' y1=\'4\' x2=\'16.5\' y2=\'6\'/><line x1=\'21\' y1=\'4\' x2=\'21\' y2=\'6\'/>',
+  'treadmill': '<rect x=\'2\' y=\'15\' width=\'15\' height=\'4\' rx=\'2\'/><path d=\'M14 15V9a2 2 0 012-2h2.5\'/><circle cx=\'19.5\' cy=\'5.5\' r=\'1.3\'/>',
+  'vanity': '<ellipse cx=\'12\' cy=\'6.5\' rx=\'4\' ry=\'5\'/><line x1=\'4\' y1=\'16\' x2=\'20\' y2=\'16\'/><line x1=\'6\' y1=\'16\' x2=\'6\' y2=\'21\'/><line x1=\'18\' y1=\'16\' x2=\'18\' y2=\'21\'/><line x1=\'12\' y1=\'11.5\' x2=\'12\' y2=\'16\'/>',
+  'chest': '<rect x=\'3\' y=\'7\' width=\'18\' height=\'9\' rx=\'1\'/><line x1=\'3\' y1=\'11.5\' x2=\'21\' y2=\'11.5\'/><rect x=\'9\' y=\'9\' width=\'6\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><line x1=\'6\' y1=\'16\' x2=\'6\' y2=\'19\'/><line x1=\'18\' y1=\'16\' x2=\'18\' y2=\'19\'/>',
+  'heater': '<rect x=\'3\' y=\'9\' width=\'18\' height=\'9\' rx=\'1.5\'/><path d=\'M7 9c0-1.5 1-2 1-3.5S7 3 7 3M12 9c0-1.5 1-2 1-3.5S12 3 12 3M17 9c0-1.5 1-2 1-3.5S17 3 17 3\'/>',
+  'styler': '<rect x=\'6\' y=\'2\' width=\'12\' height=\'20\' rx=\'1.5\'/><path d=\'M10 6c0 1-1 1.5-1 2.5s1 1.5 1 2.5-1 1.5-1 2.5M14 6c0 1-1 1.5-1 2.5s1 1.5 1 2.5-1 1.5-1 2.5\'/>',
+  'ski': '<line x1=\'6\' y1=\'21\' x2=\'9\' y2=\'3\'/><path d=\'M9 3c1.3 0 1.8.5 1.8 1.5\'/><line x1=\'14\' y1=\'21\' x2=\'17\' y2=\'3\'/><path d=\'M17 3c1.3 0 1.8.5 1.8 1.5\'/>',
+  'golf': '<path d=\'M6 21V4l11 3.2L6 11\'/><circle cx=\'18\' cy=\'19\' r=\'1.6\'/>',
+  'bowling': '<circle cx=\'6.5\' cy=\'16.5\' r=\'3.5\'/><circle cx=\'5.5\' cy=\'15.5\' r=\'0.4\' fill=\'currentColor\' stroke=\'none\'/><circle cx=\'7.5\' cy=\'15.5\' r=\'0.4\' fill=\'currentColor\' stroke=\'none\'/><circle cx=\'6.5\' cy=\'17.2\' r=\'0.4\' fill=\'currentColor\' stroke=\'none\'/><path d=\'M15 3c-1 2-1 3 .5 4.2S17 9 16 11s-1 3 .5 4.2S18 17 17 19h4c1-2 1-3-.5-4.2S19 13 20 11s1-3-.5-4.2S18 5 19 3z\'/>',
+  'inline-skate': '<path d=\'M3 18h13l2.5-3.2H8.5L6 12H3v6z\'/><circle cx=\'6.5\' cy=\'19.6\' r=\'1.1\'/><circle cx=\'10\' cy=\'19.6\' r=\'1.1\'/><circle cx=\'13.5\' cy=\'19.6\' r=\'1.1\'/>',
+  'ice-skate': '<path d=\'M5 16V6a2 2 0 012-2h5v12\'/><path d=\'M3 16h13l3-2.2\'/><line x1=\'4\' y1=\'19\' x2=\'20\' y2=\'19\'/>',
+  'screen': '<rect x=\'2\' y=\'3\' width=\'6\' height=\'18\' rx=\'0.6\'/><rect x=\'9\' y=\'3\' width=\'6\' height=\'18\' rx=\'0.6\'/><rect x=\'16\' y=\'3\' width=\'6\' height=\'18\' rx=\'0.6\'/>',
+  'jar': '<path d=\'M8 3h8v2.5H8z\'/><path d=\'M7 5.5h10l1.2 4.2v8.3a4 4 0 01-4 4h-4.4a4 4 0 01-4-4V9.7z\'/>',
+  'broom': '<line x1=\'15\' y1=\'2\' x2=\'7\' y2=\'15\'/><path d=\'M7 15l-3.5 6.5h9z\'/><line x1=\'5.5\' y1=\'18.5\' x2=\'11\' y2=\'18.5\'/>',
+  'bathtub': '<path d=\'M4 12V7a2 2 0 012-2h1a2 2 0 012 2\'/><path d=\'M2 12h20\'/><path d=\'M3 12v3a5 5 0 005 5h8a5 5 0 005-5v-3\'/><line x1=\'8\' y1=\'20\' x2=\'8\' y2=\'22\'/><line x1=\'16\' y1=\'20\' x2=\'16\' y2=\'22\'/>',
+  'dining-table': '<rect x=\'4\' y=\'9\' width=\'16\' height=\'2\' rx=\'1\'/><line x1=\'6.5\' y1=\'11\' x2=\'6.5\' y2=\'19\'/><line x1=\'17.5\' y1=\'11\' x2=\'17.5\' y2=\'19\'/><path d=\'M2 9V7a1 1 0 011-1h2M22 9V7a1 1 0 00-1-1h-2\'/>',
+  'dining-chair': '<path d=\'M6 3v9M18 3v9\'/><path d=\'M5 12h14v3.5a1 1 0 01-1 1H6a1 1 0 01-1-1V12z\'/><line x1=\'7\' y1=\'16.5\' x2=\'7\' y2=\'21\'/><line x1=\'17\' y1=\'16.5\' x2=\'17\' y2=\'21\'/>',
+  'rice-cooker': '<rect x=\'4\' y=\'9\' width=\'16\' height=\'9\' rx=\'2\'/><path d=\'M4 9a2 2 0 012-2h12a2 2 0 012 2\'/><circle cx=\'12\' cy=\'6\' r=\'1\'/><line x1=\'8.5\' y1=\'13.5\' x2=\'8.5\' y2=\'13.51\'/>',
+  'basket': '<path d=\'M4 10h16l-1.6 8.2a2 2 0 01-2 1.8H7.6a2 2 0 01-2-1.8z\'/><path d=\'M8 10V7a4 4 0 018 0v3\'/>',
+  'buffet': '<rect x=\'3\' y=\'13\' width=\'18\' height=\'2\' rx=\'1\'/><line x1=\'5.5\' y1=\'15\' x2=\'5.5\' y2=\'20\'/><line x1=\'18.5\' y1=\'15\' x2=\'18.5\' y2=\'20\'/><path d=\'M7 13a2 2 0 014 0M13 13a2 2 0 014 0\'/>',
+  'display-cabinet': '<rect x=\'5\' y=\'2\' width=\'14\' height=\'20\' rx=\'1\'/><line x1=\'5\' y1=\'12\' x2=\'19\' y2=\'12\'/><line x1=\'9\' y1=\'2\' x2=\'9\' y2=\'12\'/><line x1=\'15\' y1=\'2\' x2=\'15\' y2=\'12\'/>',
+  'dispenser': '<rect x=\'6\' y=\'3\' width=\'12\' height=\'18\' rx=\'1.5\'/><rect x=\'9\' y=\'6\' width=\'6\' height=\'4\' rx=\'0.5\'/><line x1=\'12\' y1=\'13\' x2=\'12\' y2=\'15\'/><path d=\'M10 15h4l-1 3h-2z\'/>',
+  'low-table': '<rect x=\'3\' y=\'11\' width=\'18\' height=\'2\' rx=\'1\'/><path d=\'M5.5 13l-1.5 6M18.5 13l1.5 6\'/>',
+  'crib': '<rect x=\'4\' y=\'10\' width=\'16\' height=\'7\' rx=\'1\'/><line x1=\'4\' y1=\'10\' x2=\'4\' y2=\'5\'/><line x1=\'7.2\' y1=\'10\' x2=\'7.2\' y2=\'5\'/><line x1=\'10.4\' y1=\'10\' x2=\'10.4\' y2=\'5\'/><line x1=\'13.6\' y1=\'10\' x2=\'13.6\' y2=\'5\'/><line x1=\'16.8\' y1=\'10\' x2=\'16.8\' y2=\'5\'/><line x1=\'20\' y1=\'10\' x2=\'20\' y2=\'5\'/><line x1=\'2\' y1=\'17\' x2=\'2\' y2=\'20.5\'/><line x1=\'22\' y1=\'17\' x2=\'22\' y2=\'20.5\'/>',
+  'corner-cabinet': '<path d=\'M4 21V6l14 15z\'/><line x1=\'4\' y1=\'14\' x2=\'11\' y2=\'14\'/><circle cx=\'7\' cy=\'17.5\' r=\'0.7\' fill=\'currentColor\' stroke=\'none\'/>',
+  'antique-chest': '<rect x=\'4\' y=\'5\' width=\'16\' height=\'11\' rx=\'1\'/><line x1=\'4\' y1=\'10.5\' x2=\'20\' y2=\'10.5\'/><rect x=\'9\' y=\'6.8\' width=\'6\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><rect x=\'9\' y=\'12.3\' width=\'6\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><path d=\'M6 16l-1.5 5M18 16l1.5 5\'/>',
+  'trunk': '<path d=\'M3 10a2 2 0 012-2h14a2 2 0 012 2v8H3z\'/><path d=\'M3 10c0-2.5 2-4 4-4h10c2 0 4 1.5 4 4\'/><rect x=\'10.5\' y=\'10.5\' width=\'3\' height=\'2\' rx=\'0.4\' fill=\'currentColor\' stroke=\'none\'/>',
+  'side-table': '<ellipse cx=\'12\' cy=\'7\' rx=\'7\' ry=\'2.2\'/><line x1=\'6\' y1=\'8\' x2=\'6\' y2=\'19\'/><line x1=\'18\' y1=\'8\' x2=\'18\' y2=\'19\'/><line x1=\'12\' y1=\'9.2\' x2=\'12\' y2=\'19\'/>',
+  'humidifier': '<path d=\'M12 21a4 4 0 01-4-4c0-3 4-8 4-8s4 5 4 8a4 4 0 01-4 4z\'/><path d=\'M8 3c0 .8-.6 1-.6 1.8S8 6 8 6.8M12 3c0 .8-.6 1-.6 1.8s.6 1 .6 1.8M16 3c0 .8-.6 1-.6 1.8s.6 1 .6 1.8\'/>',
+  'blanket': '<path d=\'M3 16c3-1.5 6-1.5 9 0s6 1.5 9 0\'/><path d=\'M3 12c3-1.5 6-1.5 9 0s6 1.5 9 0\'/><path d=\'M3 20c3-1.5 6-1.5 9 0s6 1.5 9 0\'/>',
+  'mirror': '<ellipse cx=\'12\' cy=\'9\' rx=\'6\' ry=\'7\'/><line x1=\'12\' y1=\'16\' x2=\'12\' y2=\'20\'/><line x1=\'8\' y1=\'20\' x2=\'16\' y2=\'20\'/>',
+  'bookshelf': '<rect x=\'4\' y=\'2\' width=\'16\' height=\'20\' rx=\'1\'/><line x1=\'4\' y1=\'9\' x2=\'20\' y2=\'9\'/><line x1=\'4\' y1=\'15.5\' x2=\'20\' y2=\'15.5\'/><line x1=\'7\' y1=\'4\' x2=\'7\' y2=\'8\'/><line x1=\'9.5\' y1=\'4\' x2=\'9.5\' y2=\'8\'/><line x1=\'12\' y1=\'4\' x2=\'12\' y2=\'8\'/>',
+  'office-chair': '<rect x=\'7\' y=\'4\' width=\'10\' height=\'7\' rx=\'1.5\'/><line x1=\'12\' y1=\'11\' x2=\'12\' y2=\'16\'/><path d=\'M12 16l-5 2M12 16l5 2M12 16l0 3\'/><line x1=\'12\' y1=\'19\' x2=\'12\' y2=\'21\'/><line x1=\'9\' y1=\'21\' x2=\'15\' y2=\'21\'/>',
+  'plain-chair': '<line x1=\'6\' y1=\'2\' x2=\'6\' y2=\'11\'/><rect x=\'6\' y=\'11\' width=\'11\' height=\'1.6\' rx=\'0.4\'/><line x1=\'7\' y1=\'12.6\' x2=\'7\' y2=\'21\'/><line x1=\'16\' y1=\'12.6\' x2=\'16\' y2=\'21\'/><line x1=\'6\' y1=\'6\' x2=\'11\' y2=\'6\'/>',
+  'folding-chair': '<path d=\'M4 20L12 4L20 20\'/><path d=\'M4 20L12 12L20 20\'/><line x1=\'7\' y1=\'9\' x2=\'17\' y2=\'9\'/>',
+  'computer-desk': '<rect x=\'7\' y=\'3\' width=\'10\' height=\'7\' rx=\'1\'/><line x1=\'12\' y1=\'10\' x2=\'12\' y2=\'12\'/><line x1=\'3\' y1=\'16\' x2=\'21\' y2=\'16\'/><line x1=\'5\' y1=\'16\' x2=\'5\' y2=\'21\'/><line x1=\'19\' y1=\'16\' x2=\'19\' y2=\'21\'/>',
+  'lego': '<rect x=\'4\' y=\'9\' width=\'16\' height=\'10\' rx=\'1.5\'/><circle cx=\'8\' cy=\'6.5\' r=\'2\'/><circle cx=\'16\' cy=\'6.5\' r=\'2\'/><line x1=\'8\' y1=\'6.5\' x2=\'8\' y2=\'9\'/><line x1=\'16\' y1=\'6.5\' x2=\'16\' y2=\'9\'/>',
+  'desk': '<line x1=\'2\' y1=\'9\' x2=\'22\' y2=\'9\'/><path d=\'M4 9V6a1 1 0 011-1h14a1 1 0 011 1v3\'/><rect x=\'9\' y=\'11\' width=\'6\' height=\'2.2\' rx=\'0.4\'/><line x1=\'4\' y1=\'9\' x2=\'4\' y2=\'20\'/><line x1=\'20\' y1=\'9\' x2=\'20\' y2=\'20\'/>',
+  'dining-table2': '<rect x=\'2\' y=\'7\' width=\'20\' height=\'2\' rx=\'1\'/><line x1=\'5\' y1=\'9\' x2=\'5\' y2=\'19\'/><line x1=\'9\' y1=\'9\' x2=\'9\' y2=\'19\'/><line x1=\'15\' y1=\'9\' x2=\'15\' y2=\'19\'/><line x1=\'19\' y1=\'9\' x2=\'19\' y2=\'19\'/>',
+  'dining-chair2': '<path d=\'M6 2v11\'/><line x1=\'6\' y1=\'6\' x2=\'10\' y2=\'6\'/><rect x=\'5\' y=\'13\' width=\'13\' height=\'2\' rx=\'0.6\'/><line x1=\'7\' y1=\'15\' x2=\'7\' y2=\'21\'/><line x1=\'16\' y1=\'15\' x2=\'16\' y2=\'21\'/>',
+  'bowl': '<ellipse cx=\'12\' cy=\'9.5\' rx=\'8\' ry=\'2.2\'/><path d=\'M4 9.5h16a8 5 0 01-16 0z\'/>',
+  'console-table': '<rect x=\'2\' y=\'4\' width=\'20\' height=\'2\' rx=\'1\'/><line x1=\'4.5\' y1=\'6\' x2=\'4.5\' y2=\'19\'/><line x1=\'19.5\' y1=\'6\' x2=\'19.5\' y2=\'19\'/><line x1=\'4.5\' y1=\'19\' x2=\'19.5\' y2=\'19\'/>',
+  'coffee-table2': '<rect x=\'2\' y=\'12.5\' width=\'20\' height=\'2.2\' rx=\'1\'/><line x1=\'4.5\' y1=\'14.7\' x2=\'4.5\' y2=\'19\'/><line x1=\'19.5\' y1=\'14.7\' x2=\'19.5\' y2=\'19\'/>',
+  'standing-ac': '<rect x=\'7\' y=\'2\' width=\'10\' height=\'20\' rx=\'2\'/><line x1=\'9\' y1=\'6\' x2=\'15\' y2=\'6\'/><line x1=\'9\' y1=\'9\' x2=\'15\' y2=\'9\'/><line x1=\'9\' y1=\'12\' x2=\'15\' y2=\'12\'/><circle cx=\'12\' cy=\'17\' r=\'1.2\'/>',
+  'massage-chair': '<path d=\'M4 10V6a2 2 0 012-2h1a2 2 0 012 2v4\'/><path d=\'M13 10V6a2 2 0 012-2h1a2 2 0 012 2v4\'/><rect x=\'3\' y=\'10\' width=\'16\' height=\'6\' rx=\'1.5\'/><path d=\'M19 13h3v5a1 1 0 01-1 1h-2z\'/><line x1=\'6\' y1=\'16\' x2=\'6\' y2=\'20\'/><line x1=\'14\' y1=\'16\' x2=\'14\' y2=\'20\'/>',
+  'tv-cabinet': '<rect x=\'6\' y=\'3\' width=\'12\' height=\'7\' rx=\'1\'/><line x1=\'10\' y1=\'10\' x2=\'14\' y2=\'10\'/><rect x=\'2\' y=\'13\' width=\'20\' height=\'6\' rx=\'1\'/><line x1=\'2\' y1=\'16\' x2=\'22\' y2=\'16\'/>',
+  'figurine': '<path d=\'M12 3a2.5 2.5 0 012.5 2.5c0 1-.5 1.8-1.2 2.3.9.6 1.7 1.7 1.7 3.2v2H9v-2c0-1.5.8-2.6 1.7-3.2-.7-.5-1.2-1.3-1.2-2.3A2.5 2.5 0 0112 3z\'/><rect x=\'8\' y=\'13\' width=\'8\' height=\'2\' rx=\'0.5\'/><rect x=\'9\' y=\'15\' width=\'6\' height=\'5\' rx=\'0.5\'/>',
+  'heating-pad': '<rect x=\'3\' y=\'6\' width=\'18\' height=\'12\' rx=\'2\'/><path d=\'M6 9.5c1 0 1 1.5 2 1.5s1-1.5 2-1.5 1 1.5 2 1.5 1-1.5 2-1.5 1 1.5 2 1.5 1-1.5 2-1.5\'/><path d=\'M6 14.5c1 0 1 1.5 2 1.5s1-1.5 2-1.5 1 1.5 2 1.5 1-1.5 2-1.5 1 1.5 2 1.5 1-1.5 2-1.5\'/>',
+  'duvet': '<path d=\'M3 8h14v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8z\'/><path d=\'M17 8l4 4v6a2 2 0 01-2 2h-2\'/><line x1=\'6\' y1=\'12\' x2=\'14\' y2=\'12\'/><line x1=\'6\' y1=\'16\' x2=\'14\' y2=\'16\'/>',
+  'kickboard': '<circle cx=\'5\' cy=\'20\' r=\'1.5\'/><circle cx=\'17\' cy=\'20\' r=\'1.5\'/><path d=\'M5 20h10l4-14\'/><line x1=\'17\' y1=\'6\' x2=\'21\' y2=\'6\'/>',
+  'reading-table': '<rect x=\'3\' y=\'8\' width=\'18\' height=\'2\' rx=\'1\'/><line x1=\'5.5\' y1=\'10\' x2=\'5.5\' y2=\'20\'/><line x1=\'18.5\' y1=\'10\' x2=\'18.5\' y2=\'20\'/>',
+};
+
+const listEl = document.getElementById('item-list');
+function svgIcon(slug, tier){
+  const inner = ICONS[slug] || ICONS['package'];
+  const px = {sm:21, md:27, lg:33, xl:39}[tier] || 27;
+  return `<svg class="licon" width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+function renderCustomSection(){
+  const slotsHtml = customSlots.map((slot, i)=>{
+    if(slot && slot.photo){
+      return `<div class="item-card" data-slot="${i}">
+        <button class="photo-delete" data-role="delete-slot" data-slot="${i}" title="삭제">×</button>
+        <div class="icon"><img src="${slot.photo}"></div>
+        <div class="lbl">사진찍기</div>
+      </div>`;
+    }
+    return `<div class="item-card" data-slot="${i}">
+      <div class="icon">${svgIcon('box')}</div>
+      <div class="lbl">사진찍기</div>
+    </div>`;
+  }).join('');
+  const addBoxHtml = `<div class="item-card add-slot-card" id="add-slot-btn">
+    <div class="icon add-slot-plus">+</div>
+  </div>`;
+
+  listEl.innerHTML = `
+    <div class="custom-section">
+      <div class="item-cards">${slotsHtml}${addBoxHtml}</div>
+      <textarea id="custom-note" class="custom-note" placeholder="특별히 신경써서 포장 드려야하는 물품이 있다면 '사진'과 함께 이곳에 작성해 주시기 바랍니다.">${escapeHtml(customNote)}</textarea>
+    </div>
+  `;
+
+  listEl.querySelectorAll('.item-card[data-slot]').forEach(card=>{
+    const idx = parseInt(card.dataset.slot);
+    const delBtn = card.querySelector('[data-role="delete-slot"]');
+    if(delBtn){
+      delBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        customSlots[idx] = null;
+        renderItemList();
+      });
+    }
+    card.addEventListener('click', ()=>{
+      activeCustomSlotIndex = idx;
+      activeCatId = null;
+      openCamera();
+    });
+  });
+
+  document.getElementById('add-slot-btn').addEventListener('click', ()=>{
+    customSlots.push(null);
+    renderItemList();
+  });
+
+  document.getElementById('custom-note').addEventListener('input', (e)=>{
+    customNote = e.target.value;
+  });
+
+  document.getElementById('sec-count').textContent = customSlots.filter(s=>s && s.photo).length;
+  document.getElementById('all-count').textContent = state.items.length;
+}
+
+function renderItemList(){
+  if(activeSectionId === 'custom'){
+    renderCustomSection();
+    return;
+  }
+  const sec = SECTIONS.find(s=>s.id===activeSectionId);
+  const term = searchTerm.trim().toLowerCase();
+  let items = term
+    ? SECTIONS.flatMap(s=>s.items).filter(it=>it.label.toLowerCase().includes(term))
+    : sec.items;
+  items = [...items].sort((a,b)=> (a.mode==='qty'?1:0) - (b.mode==='qty'?1:0));
+
+  if(items.length===0){
+    listEl.innerHTML = `<div class="empty-hint">검색 결과가 없어요.</div>`;
+  }else{
+    listEl.innerHTML = items.map(it=>{
+      const isQty = it.mode==='qty';
+      const entries = state.items.filter(i=>i.catId===it.id);
+
+      if(isQty){
+        const qty = entries[0]?.qty || 0;
+        return `
+          <div class="item-card qty-card ${qty>0?'active':''}" data-cat="${it.id}">
+            <div class="icon">${svgIcon(it.icon, it.size)}</div>
+            <div class="lbl">${it.label}</div>
+            <div class="qty-stepper">
+              <button class="step minus" data-role="minus" ${qty===0?'disabled':''}>−</button>
+              <span class="num">${qty}</span>
+              <button class="step plus" data-role="plus">+</button>
+            </div>
+          </div>
+        `;
+      }else{
+        const count = entries.length;
+        const lastEntry = [...entries].reverse()[0];
+        const lastPhoto = lastEntry?.photo;
+        const iconInner = lastPhoto ? `<img src="${lastPhoto}">` : svgIcon(it.icon, it.size);
+        const assemblyTag = (it.needsAssembly && lastEntry?.assembly)
+          ? `<div class="assembly-tag ${lastEntry.assembly==='X'?'x':''}">${lastEntry.assembly}</div>`
+          : '';
+        return `
+          <div class="item-card" data-cat="${it.id}">
+            ${count>0?`<button class="photo-delete" data-role="delete" title="마지막 촬영 사진 삭제">×</button>`:''}
+            ${count>0?`<div class="qty">×${count}</div>`:''}
+            <div class="icon" data-role="thumb">${iconInner}</div>
+            <div class="lbl">${it.label}</div>
+            ${assemblyTag}
+          </div>
+        `;
+      }
+    }).join('');
+
+    listEl.querySelectorAll('.item-card').forEach(card=>{
+      const cat = findCat(card.dataset.cat);
+      if(cat.mode==='qty'){
+        card.querySelector('[data-role="minus"]').addEventListener('click', ()=> updateQty(cat, -1));
+        card.querySelector('[data-role="plus"]').addEventListener('click', ()=> updateQty(cat, +1));
+      }else{
+        const delBtn = card.querySelector('[data-role="delete"]');
+        if(delBtn){
+          delBtn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            deleteLastPhoto(cat);
+          });
+        }
+        card.addEventListener('click', ()=>{
+          activeCatId = cat.id;
+          openCamera();
+        });
+      }
+    });
+  }
+  document.getElementById('sec-count').textContent = sectionPhotoCount(activeSectionId);
+  document.getElementById('all-count').textContent = state.items.length;
+}
+
+document.getElementById('item-search').addEventListener('input', (e)=>{
+  searchTerm = e.target.value;
+  renderItemList();
+});
+
+renderTabs();
+renderItemList();
+
+const cameraInput = document.getElementById('camera-input');
+
+let cameraStream = null;
+
+function cameraHintText(){
+  if(activeCatId){
+    const cat = findCat(activeCatId);
+    if(cat) return `"${cat.label}" 전체가 사각형 안에 들어오도록 맞춰서 촬영해 주세요`;
+  }
+  return '물품 전체가 사각형 안에 들어오도록 맞춰서 촬영해 주세요';
+}
+
+function openCamera(){
+  // 가능하면 화면 안에 촬영 가이드가 보이는 자체 카메라를 열고,
+  // 지원되지 않는 환경(구형 브라우저, 권한 거부 등)에서는 기존 방식(폰 기본 카메라 앱)으로 자동 전환됩니다.
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    openCustomCamera();
+  }else{
+    cameraInput.click();
+  }
+}
+
+let cameraHistoryPushed = false;
+
+function showCameraModal(){
+  document.getElementById('camera-modal').classList.remove('hidden');
+  if(!cameraHistoryPushed){
+    // 뒤로가기(브라우저/기기 back)를 눌렀을 때 앱을 나가지 않고 카메라만 닫히도록,
+    // 카메라를 열 때 히스토리를 하나 쌓아둠
+    history.pushState({camera:true}, '');
+    cameraHistoryPushed = true;
+  }
+}
+
+async function openCustomCamera(){
+  const video = document.getElementById('camera-video');
+  document.getElementById('camera-hint').textContent = cameraHintText();
+  showCameraModal();
+
+  // 이미 켜져 있는 카메라가 있으면 그대로 재사용 — 사진마다 권한 팝업이 다시 뜨지 않도록 함
+  if(cameraStream && cameraStream.getVideoTracks().some(t=>t.readyState==='live')){
+    video.srcObject = cameraStream;
+    return;
+  }
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:1280} },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+  }catch(err){
+    console.error('camera access failed, falling back to native picker', err);
+    hideCameraUI();
+    cameraInput.click();
+  }
+}
+
+// 모달만 닫고 카메라 스트림은 켜진 채로 둠 (다음 사진 촬영 시 재사용)
+// fromPopState가 true면 뒤로가기 때문에 호출된 것이므로 history.back()을 또 부르지 않음
+function hideCameraUI(fromPopState){
+  document.getElementById('camera-modal').classList.add('hidden');
+  if(cameraHistoryPushed){
+    cameraHistoryPushed = false;
+    if(!fromPopState) history.back(); // 열 때 쌓아둔 히스토리를 정리
+  }
+}
+
+window.addEventListener('popstate', ()=>{
+  if(!document.getElementById('camera-modal').classList.contains('hidden')){
+    hideCameraUI(true);
+    activeCatId = null;
+    activeCustomSlotIndex = null;
+  }
+});
+
+// 스트림 자체를 완전히 종료 (물품촬영 단계를 벗어날 때만 호출)
+function stopCameraStream(){
+  hideCameraUI();
+  if(cameraStream){
+    cameraStream.getTracks().forEach(t=>t.stop());
+    cameraStream = null;
+  }
+}
+
+document.getElementById('camera-cancel').addEventListener('click', ()=>{
+  hideCameraUI();
+  activeCatId = null;
+  activeCustomSlotIndex = null;
+});
+
+document.getElementById('camera-shutter').addEventListener('click', ()=>{
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob(async (blob)=>{
+    hideCameraUI(); // 카메라는 계속 켜둔 채로 화면만 닫음
+    await handleCapturedPhoto(blob);
+  }, 'image/jpeg', 0.92);
+});
+
+async function handleCapturedPhoto(file){
+  if(!file) return;
+
+  if(activeCustomSlotIndex !== null){
+    const slotIndex = activeCustomSlotIndex;
+    activeCustomSlotIndex = null;
+    try{
+      const dataUrl = await resizeImage(file, 700, 0.6);
+      const cloudUrl = await uploadToCloudinary(dataUrl);
+      customSlots[slotIndex] = {photo:dataUrl, cloudUrl};
+    }catch(err){
+      console.error(err);
+      customSlots[slotIndex] = {photo:null, cloudUrl:null};
+    }
+    renderItemList();
+    return;
+  }
+
+  if(!activeCatId) return;
+  const cat = findCat(activeCatId);
+  const row = document.querySelector(`.item-card[data-cat="${activeCatId}"]`);
+  const thumbEl = row?.querySelector('[data-role="thumb"]');
+  if(thumbEl) thumbEl.textContent = '⏳';
+
+  let entry;
+  try{
+    const dataUrl = await resizeImage(file, 700, 0.6);
+    const cloudUrl = await uploadToCloudinary(dataUrl);
+    const {tier, matches} = await analyzePhoto(cat, dataUrl);
+    entry = {catId:cat.id, label:cat.label, cbm:cat.cbm, photo:dataUrl, cloudUrl, sizeTier:tier, mismatchFlag:!matches};
+  }catch(err){
+    console.error(err);
+    entry = {catId:cat.id, label:cat.label, cbm:cat.cbm, photo:null, cloudUrl:null, sizeTier:0, mismatchFlag:false};
+  }
+  state.items.push(entry);
+  activeCatId = null;
+  renderTabs();
+  renderItemList();
+  updateBar2();
+  if(entry.mismatchFlag){
+    askMismatch(cat, entry);
+  }else if(cat.needsAssembly){
+    askAssembly(entry);
+  }
+}
+
+cameraInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  await handleCapturedPhoto(file);
+  cameraInput.value = '';
+});
+
+function askMismatch(cat, entry){
+  const modal = document.getElementById('mismatch-modal');
+  document.getElementById('mismatch-modal-sub').textContent = `찍으신 사진이 "${cat.label}"과(와) 다르게 보여요. 다시 촬영하시겠어요?`;
+  modal.classList.remove('hidden');
+  const cleanup = ()=>{
+    btnRetake.removeEventListener('click', onRetake);
+    btnKeep.removeEventListener('click', onKeep);
+    modal.classList.add('hidden');
+  };
+  const onRetake = ()=>{
+    const idx = state.items.indexOf(entry);
+    if(idx>-1) state.items.splice(idx,1);
+    cleanup();
+    renderTabs();
+    renderItemList();
+    updateBar2();
+    activeCatId = cat.id;
+    openCamera();
+  };
+  const onKeep = ()=>{
+    entry.note = (entry.note ? entry.note + ' · ' : '') + '⚠️ 사진 불일치 확인됨(고객 유지)';
+    cleanup();
+    renderItemList();
+    if(cat.needsAssembly){
+      askAssembly(entry);
+    }
+  };
+  const btnRetake = document.getElementById('mismatch-btn-retake');
+  const btnKeep = document.getElementById('mismatch-btn-keep');
+  btnRetake.addEventListener('click', onRetake);
+  btnKeep.addEventListener('click', onKeep);
+}
+
+function askAssembly(entry){
+  const modal = document.getElementById('assembly-modal');
+  document.getElementById('assembly-modal-title').textContent = entry.label + ' — 분해 가능 여부';
+  modal.classList.remove('hidden');
+  const done = (val)=>{
+    entry.assembly = val;
+    entry.note = (entry.note ? entry.note + ' · ' : '') + (val==='O' ? '분해 가능(O)' : '분해 불가(X)');
+    modal.classList.add('hidden');
+    btnO.removeEventListener('click', onO);
+    btnX.removeEventListener('click', onX);
+    renderItemList();
+  };
+  const btnO = document.getElementById('assembly-btn-o');
+  const btnX = document.getElementById('assembly-btn-x');
+  const onO = ()=>done('O');
+  const onX = ()=>done('X');
+  btnO.addEventListener('click', onO);
+  btnX.addEventListener('click', onX);
+}
+
+function updateBar2(){
+  const n = state.items.length;
+  document.getElementById('bar2-count').textContent = n;
+  document.getElementById('btn-2-next').disabled = (n===0);
+}
+
+document.getElementById('btn-2-next').addEventListener('click', ()=>{
+  renderReview();
+  goStep(3);
+});
+
+function buildEstimateEmailHtml(result){
+  if(!result || result.error){
+    return `<p style="color:#888;">자동 견적 계산 실패${result?.message ? ' — '+result.message : ''}</p>`;
+  }
+  if(result.contactNeeded){
+    return `<p><b>등록된 도시 반경을 벗어난 지역</b> — 자동 견적 범위를 벗어나 담당자 확인이 필요해요.</p>`;
+  }
+  const b = result.breakdown;
+  return `
+    <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">예상 총액</td><td style="font-weight:bold;">$${Math.round(result.total).toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">기준 도시</td><td>${b.cityName}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">총 부피</td><td>약 ${result.totalCbm.toFixed(2)} CBM</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">기본가(3 CBM)</td><td>$${b.baseRate.toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">도시 할증</td><td>$${b.cityAdd.toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">도착지역 할증</td><td>$${b.destRate.toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">거주형태 할증</td><td>$${b.resSurcharge.toLocaleString()}</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#888;">추가 부피 비용</td><td>$${Math.round(b.cbmCost).toLocaleString()}</td></tr>
+    </table>`;
+}
+
+
+// resize helper
+function resizeImage(file, maxDim, quality){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w>h && w>maxDim){ h = Math.round(h*maxDim/w); w = maxDim; }
+        else if(h>=w && h>maxDim){ w = Math.round(w*maxDim/h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// AI가 사진 속 물건이 기준 크기보다 큰지/작은지 판단 — 실제 Gemini 호출은
+// 서버 함수(/api/analyze-photo)가 담당하므로 이 파일에는 키가 없습니다.
+async function analyzePhoto(cat, dataUrl){
+  try{
+    const base64 = dataUrl.split(',')[1];
+    const dim = DIM_DATA[norm(cat.label)];
+    const dimText = dim ? `이 항목의 일반적인 기준 크기는 가로 ${dim.w}인치 x 세로 ${dim.d}인치 x 높이 ${dim.h}인치입니다.` : '';
+    const response = await fetch('/api/analyze-photo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        base64,
+        mimeType: 'image/jpeg',
+        catLabel: cat.label,
+        dimText
+      })
+    });
+    const parsed = await response.json();
+    let tier = parseInt(parsed.tier);
+    if(!Number.isInteger(tier) || tier<-10 || tier>10) tier = 0;
+    const matches = parsed.matches !== false; // 응답이 애매하면 기본은 true(통과)로 처리
+    return {tier, matches};
+  }catch(err){
+    console.error('photo analysis failed (server) — treating as matches / tier 0', err);
+    return {tier: 0, matches: true};
+  }
+}
+
+// ---------- STEP 3 : review ----------
+function renderReview(){
+  const c = state.customer;
+  document.getElementById('rev-customer').innerHTML = `
+    <div class="rev-row"><span class="k">성함</span><span class="v">${escapeHtml(c.name)}</span></div>
+    <div class="rev-row"><span class="k">이메일</span><span class="v">${escapeHtml(c.email)}</span></div>
+    <div class="rev-row"><span class="k">출발지 ZIP</span><span class="v">${escapeHtml(c.zip)}</span></div>
+    <div class="rev-row"><span class="k">도착지역</span><span class="v">${escapeHtml(c.dest)}</span></div>
+  `;
+  const list = document.getElementById('rev-items');
+  list.innerHTML = state.items.map(it=>{
+    const cat = findCat(it.catId);
+    const isQty = cat?.mode==='qty';
+    const iconInner = it.photo
+      ? `<img src="${it.photo}">`
+      : `<div class="rev-icon-wrap">${svgIcon(cat?.icon || 'package', cat?.size)}</div>`;
+    const subLine = it.note ? escapeHtml(it.note) : '';
+    const rightCol = isQty
+      ? `<div class="cuft qty-col">×${it.qty}</div>`
+      : (()=>{ const r=cbmRange(effectiveCbm(it, cat)); return `<div class="cuft">${r.low} ~ ${r.high} cbm</div>`; })();
+    return `
+    <div class="item-row">
+      ${iconInner}
+      <div class="info">
+        <div class="n">${escapeHtml(it.label)}</div>
+        <div class="m">${subLine}</div>
+      </div>
+      ${rightCol}
+    </div>
+  `;
+  }).join('');
+
+  const customPhotos = customSlots.filter(s=>s && s.photo);
+  const hasCustom = customPhotos.length > 0 || customNote.trim().length > 0;
+  document.getElementById('rev-custom-card').style.display = hasCustom ? 'block' : 'none';
+  document.getElementById('rev-custom-photos').innerHTML = customPhotos.map(s=>`<img src="${s.photo}">`).join('');
+  document.getElementById('rev-custom-note').textContent = customNote.trim();
+}
+
+document.getElementById('agree-checkbox').addEventListener('change', function(){
+  if(this.checked) document.getElementById('agree-err').classList.remove('show');
+});
+document.getElementById('agree-duplicate-checkbox').addEventListener('change', function(){
+  if(this.checked) document.getElementById('agree-duplicate-err').classList.remove('show');
+});
+
+document.getElementById('btn-3-back').addEventListener('click', ()=> goStep(2));
+document.getElementById('btn-3-next').addEventListener('click', ()=>{
+  const agree = document.getElementById('agree-checkbox');
+  const agreeDup = document.getElementById('agree-duplicate-checkbox');
+  if(!agree.checked || !agreeDup.checked){
+    document.getElementById('agree-err').classList.toggle('show', !agree.checked);
+    document.getElementById('agree-duplicate-err').classList.toggle('show', !agreeDup.checked);
+    document.getElementById('rev-estimate-card').scrollIntoView({block:'center', behavior:'smooth'});
+    return;
+  }
+  goLoading();
+  const id = 'HD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(1000+Math.random()*9000);
+  document.getElementById('quote-id').textContent = id;
+  submitQuote(id); // fires off storage save + staff email in the background, doesn't block navigation
+  setTimeout(()=> goStep(4), 3000);
+});
+
+function goLoading(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-loading').classList.add('active');
+  for(let i=1;i<=3;i++) document.getElementById('bar-'+i).style.display = 'none';
+  window.scrollTo(0,0);
+}
+
+document.getElementById('btn-done').addEventListener('click', ()=>{
+  document.querySelector('.app').innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;background:var(--cream);">
+      <div style="font-size:32px;margin-bottom:12px;">✅</div>
+      <div style="font-family:Georgia,serif;font-size:20px;color:var(--navy);margin-bottom:8px;">접수가 완료됐습니다</div>
+      <div style="font-size:13.5px;color:var(--muted);">이용해 주셔서 감사합니다.</div>
+    </div>
+  `;
+});
+
+// ---------- STEP 4 : submit ----------
+async function shrinkForEmail(dataUrl, maxDim, quality){
+  if(!dataUrl) return null;
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      let w = img.width, h = img.height;
+      if(w>h && w>maxDim){ h = Math.round(h*maxDim/w); w = maxDim; }
+      else if(h>=w && h>maxDim){ w = Math.round(w*maxDim/h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = ()=>resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+// ================= 견적서(PDF) 생성 =================
+// 페이지1: 사진 촬영한 물품만 기준 / 페이지2: 사진 촬영 물품 + 수량체크(생활잔짐) 박스를 합친 기준
+function buildPhotoRowsForPdf(){
+  const photoEntries = state.items.filter(it => findCat(it.catId)?.mode !== 'qty');
+  const groups = {};
+  photoEntries.forEach(it=>{
+    if(!groups[it.catId]) groups[it.catId] = [];
+    groups[it.catId].push(it);
+  });
+  let totalLoad = 0;
+  const rows = Object.values(groups).map(entries=>{
+    const cat = findCat(entries[0].catId);
+    const count = entries.length;
+    const dim = DIM_DATA[norm(cat.label)];
+    const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
+    const realPerUnit = dim ? dim.realcbm : 0;
+    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영 (기존엔 이 값이 빠져있던 버그를 수정함)
+    const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
+    const loadTotal = loadSum*discount;
+    totalLoad += loadTotal;
+    // PDF는 고객용이라 "(AI크기판정 ...)" 문구는 표시하지 않음 (계산에는 계속 반영됨)
+    return {label:cat.label, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
+  });
+  return {rows, totalLoad};
+}
+
+// 수량체크 항목은 L/M/S 박스로 환산 — 견적서에는 "고객이 체크한 개수의 60%"를 소수점 내림해서 반영
+function buildBoxRowsForPdf(){
+  const qtyEntries = state.items.filter(it => findCat(it.catId)?.mode === 'qty');
+  const totals = {L:0, M:0, S:0};
+  qtyEntries.forEach(it=>{
+    const size = SIZE_DATA[norm(it.label)] || 'S';
+    totals[size] += (it.qty || 0);
+  });
+  let totalLoad = 0;
+  const rows = [];
+  ['L','M','S'].forEach(size=>{
+    const count = Math.floor(totals[size] * 0.6); // 60% 반영, 소수점은 무조건 내림
+    if(count <= 0) return;
+    const dim = BOX_DIM[size];
+    const load = dim.load * count;
+    totalLoad += load;
+    rows.push({label:dim.label, w:dim.w, d:dim.d, h:dim.h, real:dim.real, count, load});
+  });
+  return {rows, totalLoad};
+}
+
+function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
+  const rowsHtml = rowsData.rows.map(r=>`
+    <tr>
+      <td class="td-left">${escapeHtml(r.label)}</td>
+      <td>${r.w}</td><td>${r.d}</td><td>${r.h}</td>
+      <td>${(+r.real).toFixed(9)}</td>
+      <td>${r.count}</td>
+      <td class="bold">${(+r.load).toFixed(9)}</td>
+    </tr>`).join('');
+
+  const totalBoxHtml = contactNeeded ? `
+    <div class="pdf-totalbox">
+      <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
+      <div style="padding:14px;text-align:center;font-size:12.5px;">담당자 확인 후 정확한 비용을 안내드립니다.</div>
+    </div>` : `
+    <div class="pdf-totalbox">
+      <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
+      <div class="tt-row2">
+        <div class="tt-row2-label">총 예상비용</div>
+        <div class="tt-row2-mid">
+          <div class="tt-cell"><span class="tt-cell-sub">기본 3 큐빅</span><span class="tt-cell-amt">$${priced.combinedBase.toLocaleString()}</span></div>
+          <div class="tt-cell"><span class="tt-cell-sub">추가큐빅</span><span class="tt-cell-amt">$${priced.extraRate}</span></div>
+        </div>
+        <div class="tt-row2-total">$${priced.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      </div>
+    </div>`;
+
+  return `
+  <div class="pdf-page">
+    <div class="pdf-logo">현대해운</div>
+    <div class="pdf-company">HYUNDAI SHIPPING USA INC.</div>
+    <div class="pdf-addr">18300 S. WILMINGTON AVE., UNIT 160, RANCHO DOMINGUEZ, CA 90220</div>
+    <div class="pdf-addr">TEL: (+1)-310-763-7770 / FAX: (+1)-310-763-7772 / www.cyhds.com</div>
+    <div class="pdf-hr"></div>
+    <div class="pdf-gulim-body">
+    <div class="pdf-title">[THIS IS NOT THE FINAL INVOICE]</div>
+    <div class="pdf-meta">견적번호: ${escapeHtml(quoteId)} &nbsp;&nbsp;&nbsp; 작성일: ${dateStr}</div>
+    <table class="pdf-table">
+      <colgroup>
+        <col class="c-item"><col class="c-dim"><col class="c-dim"><col class="c-dim">
+        <col class="c-real"><col class="c-qty"><col class="c-load">
+      </colgroup>
+      <thead>
+        <tr>
+          <th rowspan="2">아이템</th>
+          <th colspan="3">전체 부피 (inch)</th>
+          <th rowspan="2">실 포장<br>CBM</th>
+          <th rowspan="2">수량</th>
+          <th rowspan="2">적재 CBM</th>
+        </tr>
+        <tr><th>가로</th><th>세로</th><th>높이</th></tr>
+      </thead>
+      <tbody>${rowsHtml || '<tr><td colspan="7" style="padding:14px;color:#888;">해당 항목 없음</td></tr>'}</tbody>
+    </table>
+    <div class="pdf-note">Volume estimates use AI analysis based on a large-scale furniture database from Crate &amp; Barrel, Pottery Barn, and RH.</div>
+    <div class="pdf-note">This estimate may vary by angle, lighting, distance, and composition; final cost is based on actual volume.</div>
+    ${totalBoxHtml}
+    <div class="pdf-note pdf-clearance">Custom clearance is not included</div>
+    <div class="pdf-footer">18300 S. WILMINGTON AVE. UNIT 160, RANCHO DOMINGUEZ, CA 90220 *TEL: 310-763-7770, FAX: 310-763-7772</div>
+    </div>
+  </div>`;
+}
+
+async function renderPdfPageToCanvas(html){
+  const area = document.getElementById('pdf-render-area');
+  area.innerHTML = html;
+  // 웹폰트(Noto Sans KR)가 완전히 로드된 뒤에 캡처해야 폰트가 깨지지 않음 — 고정 딜레이 대신 실제 로드 완료를 기다림.
+  // 단, 폰 네트워크가 느릴 때 무한정 기다리지 않도록 최대 4초까지만 기다리고 넘어감(이 경우 시스템 기본 폰트로라도 진행됨).
+  try{
+    const fontReady = Promise.all([
+      document.fonts.load("400 11px 'Noto Sans KR'"),
+      document.fonts.load("700 11px 'Noto Sans KR'"),
+      document.fonts.ready,
+    ]);
+    const timeout = new Promise(r=>setTimeout(r, 4000));
+    await Promise.race([fontReady, timeout]);
+  }catch(err){
+    console.error('web font load check failed, proceeding anyway', err);
+  }
+  await new Promise(r=>setTimeout(r, 30)); // 레이아웃이 자리잡을 시간을 아주 잠깐 더 줌
+  const canvas = await html2canvas(area.firstElementChild, {scale:2, backgroundColor:'#ffffff'});
+  area.innerHTML = '';
+  return canvas;
+}
+
+// 2페이지 PDF를 만들어 data URI 문자열로 반환 (실패 시 null)
+async function generateQuotePdf(quoteId){
+  if(!window.jspdf || !window.html2canvas){
+    console.error('jsPDF/html2canvas 로드 실패 — PDF 생성 불가');
+    return null;
+  }
+  try{
+    const ctx = await getPricingContext();
+    const contactNeeded = !!(ctx.error || ctx.contactNeeded);
+    const dateStr = new Date().toLocaleDateString('ko-KR');
+
+    const photoRows = buildPhotoRowsForPdf();
+    const boxRows = buildBoxRowsForPdf();
+    const combinedRows = {
+      rows: [...photoRows.rows, ...boxRows.rows],
+      totalLoad: photoRows.totalLoad + boxRows.totalLoad,
+    };
+    const priced1 = contactNeeded ? null : priceForVolume(photoRows.totalLoad, ctx);
+    const priced2 = contactNeeded ? null : priceForVolume(combinedRows.totalLoad, ctx);
+
+    const { jsPDF } = window.jspdf;
+    const canvas1 = await renderPdfPageToCanvas(pdfPageHtml(photoRows, priced1, quoteId, dateStr, contactNeeded));
+    const h1 = 820 * canvas1.height / canvas1.width;
+    const doc = new jsPDF({unit:'px', format:[820, h1]});
+    doc.addImage(canvas1.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h1);
+
+    const canvas2 = await renderPdfPageToCanvas(pdfPageHtml(combinedRows, priced2, quoteId, dateStr, contactNeeded));
+    const h2 = 820 * canvas2.height / canvas2.width;
+    doc.addPage([820, h2]);
+    doc.addImage(canvas2.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h2);
+
+    const blob = doc.output('blob');
+    return await new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result); // 표준 형식의 data:application/pdf;base64,... 문자열
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }catch(err){
+    console.error('PDF 생성 실패', err);
+    return null;
+  }
+}
+
+async function submitQuote(id){
+  const now = new Date();
+  const estimate = await calculateEstimate();
+  const lineFor = (it)=>{
+    const cat = findCat(it.catId);
+    if(cat?.mode==='qty') return `- ${it.label}: 수량 ${it.qty}개`;
+    const r = cbmRange(effectiveCbm(it, cat));
+    return `- ${it.label}: 약 ${r.low} ~ ${r.high} cbm${it.note ? ' ('+it.note+')' : ''}`;
+  };
+  const record = {
+    id, submittedAt: now.toISOString(),
+    customer: state.customer,
+    items: state.items.map(it=>{
+      const cat = findCat(it.catId);
+      return cat?.mode==='qty'
+        ? {label:it.label, qty:it.qty}
+        : {label:it.label, cbmRange:cbmRange(effectiveCbm(it, cat)), note:it.note, photo:it.photo};
+    })
+  };
+  try{
+    await window.storage.set('quote:'+id, JSON.stringify(record), true);
+  }catch(err){
+    console.error('storage save failed', err);
+  }
+
+  const statusEl = document.getElementById('submit-status');
+  const itemsText = state.items.map(lineFor).join('\n');
+
+  // ---- group photo items by category (for the spreadsheet-style table) ----
+  const photoEntries = state.items.filter(it => findCat(it.catId)?.mode !== 'qty');
+  const groups = {};
+  photoEntries.forEach(it=>{
+    if(!groups[it.catId]) groups[it.catId] = [];
+    groups[it.catId].push(it);
+  });
+  const customPhotoEntries = customSlots
+    .filter(s=>s && s.photo)
+    .map((s,i)=>({label:`직접입력 사진 ${i+1}`, photo:s.photo, cloudUrl:s.cloudUrl}));
+  const galleryUrl = await uploadGalleryPage([...photoEntries, ...customPhotoEntries], id);
+  const customPhotosHtml = customPhotoEntries.length
+    ? customPhotoEntries.map((e,i)=> e.cloudUrl ? `<a href="${e.cloudUrl}" target="_blank">사진${i+1}보기</a>` : `사진${i+1}(업로드 실패)`).join(' &nbsp;·&nbsp; ')
+    : '(촬영된 사진 없음)';
+
+  const photoRows = Object.values(groups).map((entries)=>{
+    const cat = findCat(entries[0].catId);
+    const count = entries.length;
+    const dim = DIM_DATA[norm(cat.label)];
+    const photoTag = entries.some(e=>e.cloudUrl || e.photo) ? '📷' : '-';
+    const w = dim ? dim.w : '-';
+    const d = dim ? dim.d : '-';
+    const h = dim ? dim.h : '-';
+    const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
+    const realTotal = dim ? (dim.realcbm*count*discount).toFixed(3) : '-';
+    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영 (기존엔 이 값이 빠져있던 버그를 수정함)
+    const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
+    const loadTotal = dim ? (loadSum*discount).toFixed(3) : '-';
+    const assemblyTxt = entries.some(e=>e.assembly) ? entries.map(e=>e.assembly?`(${e.assembly})`:'').join(' ') : '';
+    const mismatchTxt = entries.some(e=>e.mismatchFlag) ? ' ⚠️사진확인필요' : '';
+    const tierVals = entries.map(e=>tierPct(e.sizeTier));
+    const tierTxt = tierVals.some(p=>p!==0) ? ` 🔍AI크기판정:${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')}` : '';
+    const noteTxt = assemblyTxt + mismatchTxt + tierTxt;
+    return `<tr>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${photoTag}</td>
+      <td style="padding:6px 8px;font-size:13px;">${escapeHtml(cat.label)} ${noteTxt}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${w}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${d}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${h}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${realTotal}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${count}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;font-weight:bold;">${loadTotal}</td>
+    </tr>`;
+  });
+  const itemsHtml = `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;">
+    <tr style="background:#f1ede4;">
+      <th style="padding:6px 8px;font-size:12px;text-align:left;">사진</th>
+      <th style="padding:6px 8px;font-size:12px;text-align:left;">아이템</th>
+      <th style="padding:6px 8px;font-size:12px;">가로(inch)</th>
+      <th style="padding:6px 8px;font-size:12px;">세로(inch)</th>
+      <th style="padding:6px 8px;font-size:12px;">높이(inch)</th>
+      <th style="padding:6px 8px;font-size:12px;">실포장CBM</th>
+      <th style="padding:6px 8px;font-size:12px;">수량</th>
+      <th style="padding:6px 8px;font-size:12px;">적재CBM</th>
+    </tr>
+    ${photoRows.join('')}
+  </table>`;
+
+  // ---- quantity-checked items (separate list, no photos/volume) ----
+  const qtyEntries = state.items.filter(it => findCat(it.catId)?.mode === 'qty');
+  let qtyItemsHtml;
+  if(qtyEntries.length){
+    const totals = {L:0, M:0, S:0};
+    const rows = qtyEntries.map(it=>{
+      const size = SIZE_DATA[norm(it.label)] || 'S';
+      totals[size] += it.qty;
+      return `<tr>
+        <td style="padding:5px 8px;font-size:13px;">${escapeHtml(it.label)}</td>
+        <td style="padding:5px 8px;font-size:13px;text-align:center;">${size}</td>
+        <td style="padding:5px 8px;font-size:13px;text-align:right;font-weight:bold;">${it.qty}</td>
+      </tr>`;
+    }).join('');
+    qtyItemsHtml = `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-bottom:14px;">
+      <tr style="background:#f1ede4;">
+        <th style="padding:6px 8px;font-size:12px;text-align:left;">아이템</th>
+        <th style="padding:6px 8px;font-size:12px;">사이즈</th>
+        <th style="padding:6px 8px;font-size:12px;text-align:right;">개수</th>
+      </tr>
+      ${rows}
+    </table>
+    <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr><td style="padding:4px 20px 4px 8px;font-size:13px;">LARGE BOX</td><td style="padding:4px 8px;font-size:13px;font-weight:bold;text-align:right;">${totals.L}</td></tr>
+      <tr><td style="padding:4px 20px 4px 8px;font-size:13px;">MEDIUM BOX</td><td style="padding:4px 8px;font-size:13px;font-weight:bold;text-align:right;">${totals.M}</td></tr>
+      <tr><td style="padding:4px 20px 4px 8px;font-size:13px;">SMALL BOX</td><td style="padding:4px 8px;font-size:13px;font-weight:bold;text-align:right;">${totals.S}</td></tr>
+    </table>`;
+  }else{
+    qtyItemsHtml = '<p style="font-size:13px;color:#888;">수량체크 항목이 없습니다.</p>';
+  }
+
+  const templateParams = {
+    to_email: 'RICKY@CYHDS.COM',
+    quote_id: id,
+    customer_name: state.customer.name,
+    customer_email: state.customer.email,
+    customer_zip: state.customer.zip,
+    customer_dest: state.customer.dest,
+    item_count: state.items.length,
+    items_text: itemsText,
+    items_html: itemsHtml,
+    qty_items_html: qtyItemsHtml,
+    gallery_url: galleryUrl || '(사진 업로드 실패 — 링크 없음)',
+    special_note: customNote.trim() || '(작성된 내용 없음)',
+    custom_photo_count: customPhotoEntries.length,
+    custom_photos_html: customPhotosHtml,
+    estimate_html: buildEstimateEmailHtml(estimate),
+  };
+
+  let staffOk = false;
+  if(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && window.emailjs){
+    staffOk = await sendEmailWithRetry(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+  }
+
+  // ---- 고객용 견적서(PDF) 이메일 — 담당자 이메일과는 별개로 자동 발송됨 ----
+  let customerOk = false;
+  if(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_CUSTOMER_TEMPLATE_ID && window.emailjs && state.customer.email){
+    try{
+      const pdfDataUri = await generateQuotePdf(id);
+      const pdfUrl = pdfDataUri ? await uploadToCloudinary(pdfDataUri) : null;
+      if(pdfUrl){
+        const customerParams = {
+          to_email: state.customer.email,
+          cc_email: 'ricky@cyhds.com', // EmailJS 템플릿의 CC 필드에 {{cc_email}}로 연결해 두어야 함
+          customer_name: state.customer.name,
+          quote_id: id,
+          pdf_url: pdfUrl,
+        };
+        customerOk = await sendEmailWithRetry(EMAILJS_SERVICE_ID, EMAILJS_CUSTOMER_TEMPLATE_ID, customerParams);
+      }else{
+        console.error('견적서 PDF 업로드 실패 — 고객 이메일을 보내지 못함');
+      }
+    }catch(err){
+      console.error('고객 견적서 이메일 발송 실패', err);
+    }
+  }
+
+  // status text updates whenever this finishes — may land after step 4 is already showing, that's fine
+  if(!EMAILJS_PUBLIC_KEY || !EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID){
+    statusEl.textContent = '접수 내용이 저장됐어요. (이메일 자동발송 설정이 아직 연결되지 않았어요)';
+  }else if(staffOk && customerOk){
+    statusEl.textContent = '담당자와 고객님 이메일로 견적서가 자동 전송됐어요.';
+  }else if(staffOk){
+    statusEl.textContent = '담당자에게는 전송됐지만, 고객님께 견적서 이메일은 전송하지 못했어요.';
+  }else{
+    statusEl.textContent = '자동 전송에 실패했어요. 아래 연락처로 문의해 주세요.';
+  }
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>
