@@ -112,7 +112,7 @@
 
   /* Content */
   .screen{flex:1;padding:22px 20px 100px;display:none;}
-  #screen-3{padding-bottom:170px;} /* bar-3에 버튼이 2개(견적신청+다시촬영)라 기본 100px보다 더 필요함 */
+  #screen-3{padding-bottom:136px;} /* bar-3에 버튼이 2개(견적신청+다시촬영)라 기본 100px보다 더 필요함. 실제 값은 syncBottomPadding()이 바 높이를 재서 다시 맞춤 */
   .screen.active{display:block;animation:fade .25s ease;}
   @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
@@ -231,6 +231,12 @@
     box-sizing:border-box;display:block;
   }
   .custom-note:focus{outline:none;border-color:var(--navy-2);}
+  /* 안내 문구 — placeholder는 입력을 시작하면 사라지므로 별도 요소로 항상 보이게 둔다 */
+  .custom-note-hint{
+    margin-top:8px;font-size:12px;color:var(--muted);line-height:1.55;
+    display:flex;gap:6px;align-items:flex-start;
+  }
+  .custom-note-hint::before{content:'※';color:var(--orange-dark);flex-shrink:0;}
   .item-card{
     background:#fff;border-radius:16px;border:1px solid #edeae1;
     box-shadow:0 1px 2px rgba(20,20,20,.04);
@@ -274,18 +280,49 @@
   }
 
   .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;}
-  .spinner{animation:spin-slow 3s linear infinite;}
-  @keyframes spin-slow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-  .spinner .ray{
-    transform-box:fill-box;transform-origin:center;
-    animation:ray-twinkle 1.2s ease-in-out infinite;
-  }
-  @keyframes ray-twinkle{
-    0%,100%{transform:scaleY(0.55);opacity:.5;}
-    50%{transform:scaleY(1);opacity:1;}
-  }
-  .loading-title{font-family:Georgia,"Times New Roman",serif;font-size:18px;color:var(--navy);margin-top:20px;}
+  .loading-title{font-family:Georgia,"Times New Roman",serif;font-size:18px;color:var(--navy);}
   .loading-sub{font-size:13px;color:var(--muted);margin-top:6px;}
+
+  /* progress bar */
+  .loading-meter{width:100%;max-width:300px;margin-top:22px;}
+  .loading-pct{
+    font-family:Georgia,"Times New Roman",serif;font-size:30px;font-weight:700;
+    color:var(--navy);letter-spacing:-.02em;line-height:1;margin-bottom:10px;
+    font-variant-numeric:tabular-nums;
+  }
+  .loading-bar{
+    width:100%;height:7px;border-radius:7px;background:#e8e0d4;overflow:hidden;
+  }
+  .loading-bar span{
+    display:block;height:100%;width:0%;border-radius:7px;
+    background:linear-gradient(90deg,var(--orange),#f0b48f);
+    transition:width .25s linear;
+  }
+  /* rolling status line — sits right under the bar, slides up from below, holds, exits upward */
+  .loading-roller{
+    height:20px;overflow:hidden;margin-top:12px;width:100%;
+  }
+  .loading-roll-line{
+    font-size:12.5px;letter-spacing:.04em;color:var(--navy-2);
+    line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    transform:translateY(100%);opacity:0;
+  }
+  .loading-roll-line.roll-in{animation:roll-in .38s cubic-bezier(.22,.9,.3,1) forwards;}
+  .loading-roll-line.roll-out{animation:roll-out .38s cubic-bezier(.6,0,.75,.2) forwards;}
+  @keyframes roll-in{from{transform:translateY(100%);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  @keyframes roll-out{from{transform:translateY(0);opacity:1;}to{transform:translateY(-100%);opacity:0;}}
+  .loading-warn{
+    margin-top:26px;font-size:12px;color:var(--orange-dark);background:#fdf3ec;
+    border:1px solid #f2d8c6;border-radius:9px;padding:9px 12px;line-height:1.55;max-width:300px;
+  }
+
+  /* step 4 — send failure banner */
+  .submit-fail{
+    display:none;background:#fdf3f2;border:1px solid #f2c9c2;border-radius:10px;
+    padding:12px 14px;margin-top:14px;font-size:12.5px;color:var(--danger);line-height:1.6;
+  }
+  .submit-fail.show{display:block;}
+  .submit-fail .btn{margin-top:10px;padding:11px 14px;font-size:13.5px;}
   .qty-stepper .step:disabled{opacity:.35;cursor:default;box-shadow:none;}
   .qty-stepper .num{font-size:15px;font-weight:800;color:var(--ink);min-width:16px;text-align:center;}
   .empty-hint{text-align:center;color:var(--muted);font-size:13px;padding:24px 10px;}
@@ -336,11 +373,12 @@
   /* confirmation */
   .submit-notice{
     background:#fff;border:1px solid var(--line);border-radius:10px;
-    padding:12px 14px;margin-top:14px;font-size:12.5px;color:var(--navy-2);line-height:1.6;
+    padding:13px 14px;margin-top:0;font-size:12.5px;color:var(--navy-2);line-height:1.6;
+    text-align:center;
   }
   .submit-notice div + div{margin-top:6px;}
 
-  .stamp-wrap{display:flex;justify-content:center;margin:6px 0 26px;}
+  .stamp-wrap{display:flex;justify-content:center;margin:20px 0 22px;}
   .stamp{
     width:150px;height:150px;border-radius:50%;
     border:3px dashed var(--orange);
@@ -353,7 +391,7 @@
 
   .voice{font-size:13.5px;color:var(--navy-2);background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.55;margin-bottom:16px;}
 
-  .contact-card{background:#fff;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px;}
+  .contact-card{background:#fff;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;margin-top:14px;}
   .contact-card-title{font-size:13px;color:var(--navy-2);font-weight:600;padding:14px 16px 10px;}
   .contact-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);text-decoration:none;color:inherit;}
   .contact-ico{font-size:20px;width:32px;text-align:center;flex-shrink:0;}
@@ -570,10 +608,10 @@
       <label class="agree-row" for="agree-checkbox">
         <input type="checkbox" id="agree-checkbox">
         <span class="agree-text">
-          <p>본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액이며, 실제 방문 확인 후 최종 금액은 달라질 수 있어요.</p>
-          <p>관세, 세금, 항구 처리비 등 부대비용은 이 견적에 포함되어 있지 않으며 별도로 안내드려요.</p>
-          <p>입력해 주신 물품 정보가 실제와 다를 경우 견적 내용이 조정될 수 있어요.</p>
-          <p>입력해 주신 연락처(이메일 등)로 본 견적과 관련한 안내를 받는 것에 동의합니다.</p>
+          <p>본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액으로 확정금액이 아닙니다.</p>
+          <p>세금 및 세관경비 등의 부대비용은 해당 견적에 포함되어 있지 않으며 별도 안내 드립니다.</p>
+          <p>입력해 주신 물품 정보가 실제와 다를경우 견적 금액은 달라질 수 있습니다.</p>
+          <p>입력해 주신 연락처(이메일)로 견적서와 관련 안내사항 받는 것을 동의 합니다.</p>
         </span>
       </label>
       <div class="err-msg" id="agree-err">위 내용에 동의해 주셔야 견적 신청이 가능해요.</div>
@@ -581,7 +619,7 @@
       <label class="agree-row" for="agree-duplicate-checkbox" style="margin-top:16px;">
         <input type="checkbox" id="agree-duplicate-checkbox">
         <span class="agree-text">
-          <p>본 견적서는 이우주 팀장님께도 함께 전달되어 검토되고 있어요. 동일한 내용으로 중복 신청하지 않도록 부탁드려요.</p>
+          <p>본 견적서는 이우주 팀장에게도 함께 전달 되오니 동일한 내용으로 중복 신청 하지 않도록 부탁 드립니다.</p>
         </span>
       </label>
       <div class="err-msg" id="agree-duplicate-err">위 내용을 확인해 주셔야 견적 신청이 가능해요.</div>
@@ -589,45 +627,41 @@
   </div>
 
   <!-- LOADING (between step 3 and 4) -->
+  <!-- 이 화면은 이메일 발송까지 실제로 끝나야 닫힌다. 진행바는 예상 소요시간에 맞춰
+       88%까지 차오른 뒤 대기하고, 실제 완료 시점에만 100%로 채워진다. -->
   <div class="screen" id="screen-loading">
     <div class="loading-wrap">
-      <svg class="spinner" viewBox="0 0 40 40" width="72" height="72">
-        <g fill="#D97757">
-          <g class="ray-wrap" transform="rotate(0 20 20)"><rect class="ray" style="animation-delay:0.00s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(30 20 20)"><rect class="ray" style="animation-delay:0.10s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(60 20 20)"><rect class="ray" style="animation-delay:0.20s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(90 20 20)"><rect class="ray" style="animation-delay:0.30s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(120 20 20)"><rect class="ray" style="animation-delay:0.40s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(150 20 20)"><rect class="ray" style="animation-delay:0.50s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(180 20 20)"><rect class="ray" style="animation-delay:0.60s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(210 20 20)"><rect class="ray" style="animation-delay:0.70s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(240 20 20)"><rect class="ray" style="animation-delay:0.80s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(270 20 20)"><rect class="ray" style="animation-delay:0.90s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(300 20 20)"><rect class="ray" style="animation-delay:1.00s" x="19" y="3" width="2" height="10" rx="1"/></g>
-          <g class="ray-wrap" transform="rotate(330 20 20)"><rect class="ray" style="animation-delay:1.10s" x="19" y="3" width="2" height="10" rx="1"/></g>
-        </g>
-      </svg>
-      <div class="loading-title">각 사진 및 물품의 부피를<br>AI 통해 측정 및 계산 중에 있습니다.</div>
-      <div class="loading-sub">잠시만 기다려 주시기 바랍니다.</div>
+      <div class="loading-title">Processing your quotation</div>
+      <div class="loading-sub">견적서를 생성하고 전송하는 중입니다.</div>
+
+      <div class="loading-meter">
+        <div class="loading-pct" id="load-pct">0%</div>
+        <div class="loading-bar"><span id="load-bar-fill"></span></div>
+        <div class="loading-roller"><div class="loading-roll-line" id="load-roll"></div></div>
+      </div>
+
+      <div class="loading-warn">전송이 끝날 때까지 화면을 닫거나 다른 앱으로 이동하지 말아 주세요.</div>
     </div>
   </div>
 
   <!-- STEP 4 -->
   <div class="screen" id="screen-4">
     <div class="eyebrow">Step 4</div>
-    <h1>접수가 완료되었습니다</h1>
-    <div class="sub" id="submit-status">담당자에게 자동으로 전송 중이에요…</div>
-    <div class="submit-notice">
-      <div>1. 하기 Confirmation Number를 꼭 화면스캔 혹은 저장해 주시기 바랍니다.</div>
-      <div>2. 정식 견적서는 24시간 이내 이메일 통해 확인 가능 하세요.(주말 신청 시, 월요일 확인)</div>
-    </div>
 
+    <!-- 접수번호(도장)를 먼저 보여주고, 그 아래에 안내 한 줄 → 연락처 순으로 정리 -->
     <div class="stamp-wrap">
       <div class="stamp">
         <div class="t1">RECEIVED</div>
         <div class="t2" id="quote-id">HD-000000</div>
         <div class="t3">HYUNDAI SHIPPING USA</div>
       </div>
+    </div>
+
+    <div class="submit-notice" id="submit-notice">안내해 주신 이메일에 견적 안내 드렸으니 확인해 주시기 바랍니다.</div>
+
+    <div class="submit-fail" id="submit-fail">
+      <div id="submit-fail-msg"></div>
+      <button class="btn btn-navy" id="btn-retry-send">다시 전송하기</button>
     </div>
 
     <div class="contact-card">
@@ -910,9 +944,9 @@ const SECTIONS = [
     {label:'런닝머신', cbm:1.529, icon:'treadmill'},
     {label:'흔들의자', cbm:1.269, icon:'rocking-chair'},
     {label:'콘솔', cbm:0.774, icon:'console'},
-    {label:"액자(대):72inch/Lx2", icon:'image'},
-    {label:'액자(중):36inch/M', icon:'image'},
-    {label:'액자(소):18inch/S', icon:'image'},
+    {label:'액자(대):72inch', icon:'image'},
+    {label:'액자(중):36inch', icon:'image'},
+    {label:'액자(소):18inch', icon:'image'},
     {label:'도자기', icon:'vase'},
     {label:'카페트/돗자리', icon:'rug'},
     {label:'장식품 (스탠딩)', icon:'figurine'},
@@ -1183,7 +1217,7 @@ const FORMULA_DATA = {
   '건조기': {w:24, d:26, h:44, mult:1.62, ea:1},
 };
 const QTY_LABELS = [
-  '액자(대):72inch/Lx2','액자(중):36inch/M','액자(소):18inch/S','도자기','카페트/돗자리','장식품 (스탠딩)','조각','스피커',
+  '액자(대):72inch','액자(중):36inch','액자(소):18inch','도자기','카페트/돗자리','장식품 (스탠딩)','조각','스피커',
   '전기장판','램프','가습기','이불','거울','옷 & 의류','스탠드',
   '컴퓨터','프린터','LP, CD, DVD','레고,Figure','책','문구류 및 잡화','서류 및 파일',
   '그릇','전기밥솥','커피머신','냄비','부엌잡화','주방기구','전자레인지','정수기','교자상','식기세척기','식기건조기',
@@ -1195,10 +1229,10 @@ const SIZE_DATA = {
   '카페트/돗자리': 'M',
   '장식품스탠딩': 'S',
   '조각': 'S',
-  '액자대72inch/lx2': 'M',
+  '액자대72inch': 'M',
   '스피커': 'S',
-  '액자중36inch/m': 'S',
-  '액자소18inch/s': 'S',
+  '액자중36inch': 'S',
+  '액자소18inch': 'S',
   '램프': 'S',
   '옷의류': 'M',
   '전기장판': 'M',
@@ -1546,8 +1580,25 @@ function goStep(n){
     d.classList.toggle('clickable', s<n && n<4);
   });
   for(let i=1;i<=3;i++) document.getElementById('bar-'+i).style.display = (i===n)?'block':'none';
+  syncBottomPadding();
   window.scrollTo(0,0);
 }
+
+// 화면 맨 아래까지 스크롤했을 때, 마지막 카드와 하단 버튼 사이 여백이
+// 카드끼리의 간격(16px)과 똑같아지도록 화면 아래 패딩을 바 높이에 맞춰 계산한다.
+// (바 높이 = 위쪽 패딩 18px + 버튼들 + 아래 패딩 20px 이므로 패딩 = 바높이 - 18)
+function syncBottomPadding(){
+  for(let i=1;i<=3;i++){
+    const bar = document.getElementById('bar-'+i);
+    const screen = document.getElementById('screen-'+i);
+    if(!bar || !screen) continue;
+    if(bar.style.display === 'none') continue;   // 안 보이는 바는 높이를 잴 수 없음
+    const barH = bar.offsetHeight;
+    if(barH > 0) screen.style.paddingBottom = (barH - 18) + 'px';
+  }
+}
+window.addEventListener('load', syncBottomPadding);
+window.addEventListener('resize', syncBottomPadding);
 document.querySelectorAll('.step-dot').forEach(d=>{
   d.addEventListener('click', ()=>{
     const target = parseInt(d.dataset.step);
@@ -1893,6 +1944,7 @@ function renderCustomSection(){
     <div class="custom-section">
       <div class="item-cards">${slotsHtml}${addBoxHtml}</div>
       <textarea id="custom-note" class="custom-note" placeholder="특별히 신경써서 포장 드려야하는 물품이 있다면 '사진'과 함께 이곳에 작성해 주시기 바랍니다.">${escapeHtml(customNote)}</textarea>
+      <div class="custom-note-hint">견적 금액에는 포함되지 않으며, 포장 시 참고용으로 담당자에게 전달됩니다.</div>
     </div>
   `;
 
@@ -2369,11 +2421,9 @@ document.getElementById('btn-3-next').addEventListener('click', ()=>{
     document.getElementById('rev-estimate-card').scrollIntoView({block:'center', behavior:'smooth'});
     return;
   }
-  goLoading();
   const id = 'HD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(1000+Math.random()*9000);
   document.getElementById('quote-id').textContent = id;
-  submitQuote(id); // fires off storage save + staff email in the background, doesn't block navigation
-  setTimeout(()=> goStep(4), 3000);
+  runSubmitFlow(id);
 });
 
 function goLoading(){
@@ -2382,6 +2432,167 @@ function goLoading(){
   for(let i=1;i<=3;i++) document.getElementById('bar-'+i).style.display = 'none';
   window.scrollTo(0,0);
 }
+
+/* ==========================================================================
+   로딩 화면 엔진 (진행바 + 롤링 문구)
+   - 진행바: 사진 장수로 예상 소요시간을 잡고 그 속도로 88%까지 차오른 뒤 멈춰 대기.
+             실제 전송이 끝나는 순간에만 100%로 채운다. (100% 찍고 안 끝나는 상황 방지)
+   - 롤링 문구: 실제로 수행되는 작업만 영문으로 표기. 아래에서 올라와 2초 머물고 위로 빠짐.
+                작업이 길어지면 중간 구간이 계속 순환한다.
+   ========================================================================== */
+const LOADING_STEPS = [
+  'Uploading encrypted image data',
+  'Extracting capture metadata',
+  'Classifying declared inventory',
+  'Computing volumetric estimates (CBM)',
+  'Applying dimensional weight factors',
+  'Cross-referencing destination rate tables',
+  'Evaluating port handling parameters',
+  'Consolidating load plan',
+  'Compiling quotation document',
+  'Generating secure PDF record',
+  'Dispatching to logistics specialist',
+  'Delivering quotation to your inbox',
+];
+const LOAD_HOLD_MS = 2000;   // 한 문구가 멈춰 있는 시간
+const LOAD_SLIDE_MS = 380;   // 슬라이드 인/아웃 시간
+const LOAD_CAP = 88;         // 실제 완료 전까지 도달 가능한 최대 %
+const SUBMIT_TIMEOUT_MS = 90000;
+const LOAD_MIN_MS = 6000;    // 너무 빨리 끝나 화면이 깜빡이는 것 방지
+
+let loadRollTimer = null, loadBarTimer = null, loadRollIdx = 0;
+
+function startLoadingUi(photoCount){
+  const fill = document.getElementById('load-bar-fill');
+  const pct  = document.getElementById('load-pct');
+  const roll = document.getElementById('load-roll');
+  stopLoadingUi();
+  loadRollIdx = 0;
+  fill.style.transition = 'width .25s linear';
+  fill.style.width = '0%';
+  pct.textContent = '0%';
+  roll.className = 'loading-roll-line';
+  roll.textContent = '';
+
+  // 예상 소요시간: 기본 8초 + 사진 1장당 2.5초 (최소 10초, 최대 75초)
+  const estimatedMs = Math.min(75000, Math.max(10000, 8000 + photoCount * 2500));
+  const startedAt = Date.now();
+  loadBarTimer = setInterval(()=>{
+    const ratio = Math.min(1, (Date.now() - startedAt) / estimatedMs);
+    const v = Math.min(LOAD_CAP, ratio * LOAD_CAP);
+    fill.style.width = v.toFixed(1) + '%';
+    pct.textContent = Math.floor(v) + '%';
+  }, 200);
+
+  // 롤링 문구
+  const showNext = ()=>{
+    // 앞 2개(업로드/메타데이터)는 한 번만 보여주고, 이후 구간을 계속 순환시킨다
+    if(loadRollIdx >= LOADING_STEPS.length) loadRollIdx = 2;
+    const text = LOADING_STEPS[loadRollIdx++];
+    roll.className = 'loading-roll-line';
+    roll.textContent = text;
+    void roll.offsetWidth;                 // reflow — 애니메이션 재시작용
+    roll.classList.add('roll-in');
+    loadRollTimer = setTimeout(()=>{
+      roll.classList.remove('roll-in');
+      roll.classList.add('roll-out');
+      loadRollTimer = setTimeout(showNext, LOAD_SLIDE_MS);
+    }, LOAD_HOLD_MS + LOAD_SLIDE_MS);
+  };
+  showNext();
+}
+
+function stopLoadingUi(){
+  if(loadRollTimer){ clearTimeout(loadRollTimer); loadRollTimer = null; }
+  if(loadBarTimer){ clearInterval(loadBarTimer); loadBarTimer = null; }
+}
+
+// 실제 전송이 끝난 시점에만 호출 — 바를 100%로 채우고 잠깐 보여준 뒤 resolve
+function finishLoadingUi(){
+  stopLoadingUi();
+  const fill = document.getElementById('load-bar-fill');
+  const pct  = document.getElementById('load-pct');
+  const roll = document.getElementById('load-roll');
+  fill.style.transition = 'width .45s cubic-bezier(.22,.9,.3,1)';
+  fill.style.width = '100%';
+  pct.textContent = '100%';
+  roll.className = 'loading-roll-line';
+  roll.textContent = 'Complete';
+  void roll.offsetWidth;
+  roll.classList.add('roll-in');
+  return new Promise(r=>setTimeout(r, 700));
+}
+
+// 전송 중 이탈 방지 (iOS는 백그라운드 전환 시 업로드가 끊길 수 있음)
+let submitInFlight = false;
+window.addEventListener('beforeunload', (e)=>{
+  if(!submitInFlight) return;
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
+
+function countSubmitPhotos(){
+  const photoItems = state.items.filter(it => findCat(it.catId)?.mode !== 'qty').length;
+  const customPhotos = customSlots.filter(s => s && s.photo).length;
+  return photoItems + customPhotos;
+}
+
+async function runSubmitFlow(id){
+  goLoading();
+  submitInFlight = true;
+  startLoadingUi(countSubmitPhotos());
+  const startedAt = Date.now();
+
+  let result;
+  try{
+    result = await Promise.race([
+      submitQuote(id),
+      new Promise((_, reject)=> setTimeout(()=> reject(new Error('SUBMIT_TIMEOUT')), SUBMIT_TIMEOUT_MS)),
+    ]);
+  }catch(err){
+    console.error('submit flow failed', err);
+    result = {configured:true, staffOk:false, customerOk:false, timedOut:(err && err.message==='SUBMIT_TIMEOUT')};
+  }
+
+  const elapsed = Date.now() - startedAt;
+  if(elapsed < LOAD_MIN_MS) await new Promise(r=>setTimeout(r, LOAD_MIN_MS - elapsed));
+  await finishLoadingUi();
+
+  submitInFlight = false;
+  goStep(4);
+  applySubmitResult(id, result);
+}
+
+// 전송 결과를 STEP 4 화면에 반영 — 실패해도 접수번호는 이미 발급된 상태로 보여준다
+function applySubmitResult(id, result){
+  const notice  = document.getElementById('submit-notice');
+  const failBox = document.getElementById('submit-fail');
+  const failMsg = document.getElementById('submit-fail-msg');
+  const r = result || {};
+  // 담당자에게 전달됐으면 접수는 성공으로 본다 (고객 PDF 메일은 담당자가 수동 재발송 가능)
+  const ok = r.configured !== false && r.staffOk;
+
+  notice.style.display = (ok && r.customerOk) ? 'block' : 'none';
+  failBox.classList.toggle('show', !(ok && r.customerOk));
+
+  if(ok && r.customerOk) return;
+
+  if(r.configured === false){
+    failMsg.textContent = '접수 내용은 저장됐어요. (이메일 자동발송 설정이 아직 연결되지 않았어요)';
+  }else if(ok){
+    failMsg.textContent = '담당자에게는 정상 접수됐지만, 고객님 이메일로 보내는 견적서 전송에만 실패했어요. 접수는 정상 처리되었고 담당자가 확인 후 다시 보내드립니다.';
+  }else{
+    failMsg.textContent = (r.timedOut ? '전송 시간이 초과됐어요. ' : '자동 전송에 실패했어요. ')
+      + '접수번호 ' + id + ' 로 저장은 되었지만 담당자에게 전달되지 않았어요. 아래 버튼으로 다시 시도하시거나, 연락처로 문의해 주세요.';
+  }
+}
+
+document.getElementById('btn-retry-send').addEventListener('click', ()=>{
+  const id = document.getElementById('quote-id').textContent;
+  document.getElementById('submit-fail').classList.remove('show');
+  runSubmitFlow(id);
+});
 
 document.getElementById('btn-done').addEventListener('click', ()=>{
   document.querySelector('.app').innerHTML = `
@@ -2621,7 +2832,6 @@ async function submitQuote(id){
     console.error('storage save failed', err);
   }
 
-  const statusEl = document.getElementById('submit-status');
   const itemsText = state.items.map(lineFor).join('\n');
 
   // ---- group photo items by category (for the spreadsheet-style table) ----
@@ -2759,16 +2969,9 @@ async function submitQuote(id){
     }
   }
 
-  // status text updates whenever this finishes — may land after step 4 is already showing, that's fine
-  if(!EMAILJS_PUBLIC_KEY || !EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID){
-    statusEl.textContent = '접수 내용이 저장됐어요. (이메일 자동발송 설정이 아직 연결되지 않았어요)';
-  }else if(staffOk && customerOk){
-    statusEl.textContent = '담당자와 고객님 이메일로 견적서가 자동 전송됐어요.';
-  }else if(staffOk){
-    statusEl.textContent = '담당자에게는 전송됐지만, 고객님께 견적서 이메일은 전송하지 못했어요.';
-  }else{
-    statusEl.textContent = '자동 전송에 실패했어요. 아래 연락처로 문의해 주세요.';
-  }
+  // 결과만 돌려주고, 화면 표시는 applySubmitResult()가 담당한다
+  const configured = !!(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID);
+  return {configured, staffOk, customerOk, timedOut:false};
 }
 
 function escapeHtml(s){
