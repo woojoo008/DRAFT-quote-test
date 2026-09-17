@@ -402,16 +402,21 @@
   .pdf-hr{border-top:2px solid #000;margin:14px 0 22px;}
   .pdf-title{text-align:center;font-weight:bold;font-size:14px;margin-bottom:6px;}
   .pdf-meta{text-align:center;font-size:11px;color:#444;margin-bottom:18px;}
-  .pdf-table{width:100%;border-collapse:collapse;font-size:12px;}
-  .pdf-table th, .pdf-table td{border:1px solid #999;padding:6px 4px;text-align:center;}
+  .pdf-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11.5px;}
+  .pdf-table col.c-item{width:33%;}
+  .pdf-table col.c-dim{width:9%;}
+  .pdf-table col.c-real{width:16%;}
+  .pdf-table col.c-qty{width:8%;}
+  .pdf-table col.c-load{width:16%;}
+  .pdf-table th, .pdf-table td{border:1px solid #999;padding:6px 4px;text-align:center;word-break:break-word;overflow-wrap:break-word;}
   .pdf-table td.td-left{text-align:left;padding-left:8px;}
   .pdf-table td.bold{font-weight:bold;}
   .pdf-note{font-size:10.5px;color:#333;text-align:center;margin-top:8px;}
   .pdf-note.bold{font-weight:bold;background:#fff2a8;padding:4px;}
   .pdf-totalbox{margin-top:14px;border:1px solid #999;}
   .tt-row1{display:flex;border-bottom:1px solid #999;}
-  .tt-row1-label{flex:1;text-align:center;padding:6px;font-size:12px;font-weight:bold;background:#f1ede4;border-right:1px solid #999;}
-  .tt-row1-value{flex:1;text-align:center;padding:6px;font-size:12px;background:#fff2a8;}
+  .tt-row1-label{flex:1;text-align:center;padding:6px;font-size:12px;font-weight:bold;border-right:1px solid #999;}
+  .tt-row1-value{flex:1;text-align:center;padding:6px;font-size:12px;}
   .tt-row2{display:flex;}
   .tt-row2-label{width:110px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;background:#f1ede4;border-right:1px solid #999;text-align:center;padding:6px;}
   .tt-row2-mid{flex:1;display:flex;flex-direction:column;border-right:1px solid #999;}
@@ -421,8 +426,20 @@
   .tt-cell-amt{font-weight:bold;}
   .tt-row2-total{width:190px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;background:#fff2a8;}
   .pdf-footer{margin-top:26px;font-size:10px;color:#555;text-align:left;}
+  .pdf-gulim-body, .pdf-gulim-body *{
+    font-family:'Noto Sans KR','Gulim','GulimChe',sans-serif !important;
+    font-size:11px !important;
+    font-weight:normal !important;
+  }
+  .pdf-gulim-body .pdf-clearance{
+    font-size:8px !important;
+    font-weight:bold !important;
+  }
 </style>
 </head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -701,6 +718,12 @@
 </div>
 
 <script>
+// 견적서 PDF에 쓸 웹폰트를 최대한 미리 요청해둠 — 실제 신청 시점엔 이미 캐시돼 있을 가능성이 높아짐
+if(document.fonts){
+  document.fonts.load("400 11px 'Noto Sans KR'").catch(()=>{});
+  document.fonts.load("700 11px 'Noto Sans KR'").catch(()=>{});
+}
+
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(err=>console.error('SW registration failed', err));
@@ -2393,9 +2416,8 @@ function buildPhotoRowsForPdf(){
     const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
     const loadTotal = loadSum*discount;
     totalLoad += loadTotal;
-    const tierVals = entries.map(e=>tierPct(e.sizeTier));
-    const tierNote = tierVals.some(p=>p!==0) ? ` (AI크기판정 ${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')})` : '';
-    return {label:cat.label+tierNote, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
+    // PDF는 고객용이라 "(AI크기판정 ...)" 문구는 표시하지 않음 (계산에는 계속 반영됨)
+    return {label:cat.label, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
   });
   return {rows, totalLoad};
 }
@@ -2455,9 +2477,14 @@ function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
     <div class="pdf-addr">18300 S. WILMINGTON AVE., UNIT 160, RANCHO DOMINGUEZ, CA 90220</div>
     <div class="pdf-addr">TEL: (+1)-310-763-7770 / FAX: (+1)-310-763-7772 / www.cyhds.com</div>
     <div class="pdf-hr"></div>
+    <div class="pdf-gulim-body">
     <div class="pdf-title">[THIS IS NOT THE FINAL INVOICE]</div>
     <div class="pdf-meta">견적번호: ${escapeHtml(quoteId)} &nbsp;&nbsp;&nbsp; 작성일: ${dateStr}</div>
     <table class="pdf-table">
+      <colgroup>
+        <col class="c-item"><col class="c-dim"><col class="c-dim"><col class="c-dim">
+        <col class="c-real"><col class="c-qty"><col class="c-load">
+      </colgroup>
       <thead>
         <tr>
           <th rowspan="2">아이템</th>
@@ -2470,18 +2497,32 @@ function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
       </thead>
       <tbody>${rowsHtml || '<tr><td colspan="7" style="padding:14px;color:#888;">해당 항목 없음</td></tr>'}</tbody>
     </table>
-    <div class="pdf-note">all information is provided by Ethan Allen product . MISC items are not included.</div>
-    <div class="pdf-note">Estimate is not the final shipping cost and It will be made by acutal volume.</div>
+    <div class="pdf-note">Volume estimates use AI analysis based on a large-scale furniture database from Crate &amp; Barrel, Pottery Barn, and RH.</div>
+    <div class="pdf-note">This estimate may vary by angle, lighting, distance, and composition; final cost is based on actual volume.</div>
     ${totalBoxHtml}
-    <div class="pdf-note bold">Custom clearance is not included</div>
+    <div class="pdf-note pdf-clearance">Custom clearance is not included</div>
     <div class="pdf-footer">18300 S. WILMINGTON AVE. UNIT 160, RANCHO DOMINGUEZ, CA 90220 *TEL: 310-763-7770, FAX: 310-763-7772</div>
+    </div>
   </div>`;
 }
 
 async function renderPdfPageToCanvas(html){
   const area = document.getElementById('pdf-render-area');
   area.innerHTML = html;
-  await new Promise(r=>setTimeout(r, 50)); // 레이아웃이 자리잡을 시간을 잠깐 줌
+  // 웹폰트(Noto Sans KR)가 완전히 로드된 뒤에 캡처해야 폰트가 깨지지 않음 — 고정 딜레이 대신 실제 로드 완료를 기다림.
+  // 단, 폰 네트워크가 느릴 때 무한정 기다리지 않도록 최대 4초까지만 기다리고 넘어감(이 경우 시스템 기본 폰트로라도 진행됨).
+  try{
+    const fontReady = Promise.all([
+      document.fonts.load("400 11px 'Noto Sans KR'"),
+      document.fonts.load("700 11px 'Noto Sans KR'"),
+      document.fonts.ready,
+    ]);
+    const timeout = new Promise(r=>setTimeout(r, 4000));
+    await Promise.race([fontReady, timeout]);
+  }catch(err){
+    console.error('web font load check failed, proceeding anyway', err);
+  }
+  await new Promise(r=>setTimeout(r, 30)); // 레이아웃이 자리잡을 시간을 아주 잠깐 더 줌
   const canvas = await html2canvas(area.firstElementChild, {scale:2, backgroundColor:'#ffffff'});
   area.innerHTML = '';
   return canvas;
