@@ -2554,7 +2554,7 @@ async function generateQuotePdf(quoteId){
     const { jsPDF } = window.jspdf;
     const canvas1 = await renderPdfPageToCanvas(pdfPageHtml(photoRows, priced1, quoteId, dateStr, contactNeeded));
     const h1 = 820 * canvas1.height / canvas1.width;
-    const doc = new jsPDF({unit:'px', format:[820, h1]});
+    const doc = new jsPDF({unit:'px', format:[820, h1], hotfixes:['px_scaling']});
     doc.addImage(canvas1.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 820, h1);
 
     const canvas2 = await renderPdfPageToCanvas(pdfPageHtml(combinedRows, priced2, quoteId, dateStr, contactNeeded));
