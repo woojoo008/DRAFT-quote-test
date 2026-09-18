@@ -482,6 +482,9 @@
      820 x 1160px = A4 비율. 내용이 짧아도 페이지 높이를 유지하고
      주소/전화 푸터는 항상 페이지 맨 아래에 붙도록 flex로 밀어 내린다. */
   /* 서비스 지역 밖 안내 */
+  .dest-sub{display:none;margin-top:8px;}
+  .dest-sub.show{display:block;}
+
   /* 서비스 지역 밖 안내 팝업 */
   .zn-title{font-size:14.5px;font-weight:800;color:var(--navy);line-height:1.6;margin-bottom:16px;text-align:center;}
   .zn-link{
@@ -614,18 +617,18 @@
     </div>
     <div class="field" id="f-dest">
       <label>도착지역</label>
-      <select id="in-dest">
+      <select id="in-dest-group">
         <option value="">선택해 주세요</option>
         <option value="수도권">서울·경기·인천</option>
         <option value="강원도">강원도</option>
-        <option value="충청북도">충청북도</option>
-        <option value="충청남도">충청남도 (대전·세종 포함)</option>
-        <option value="전라북도">전라북도</option>
-        <option value="전라남도">전라남도 (광주 포함)</option>
-        <option value="경상북도">경상북도 (대구 포함)</option>
-        <option value="경상남도">경상남도 (부산·울산 포함)</option>
+        <option value="충청도">충청도</option>
+        <option value="전라도">전라도</option>
+        <option value="경상도">경상도</option>
         <option value="제주도">제주도</option>
       </select>
+      <!-- 충청/전라/경상을 고르면 아래가 나타나 남·북도를 다시 고른다 -->
+      <select id="in-dest-sub" class="dest-sub"></select>
+      <input type="hidden" id="in-dest">
       <div class="err-msg">도착지역을 선택해 주세요.</div>
     </div>
   </div>
@@ -1787,6 +1790,44 @@ document.getElementById('in-phone').addEventListener('input', (e)=>{
   const diff = e.target.value.length - before;
   try{ e.target.setSelectionRange(pos + diff, pos + diff); }catch(err){}
 });
+
+/* ===== 도착지역 2단 선택 =====
+   충청·전라·경상은 목록을 짧게 유지하려고 한 줄로 묶어 두고,
+   고르면 그때 남·북도를 다시 묻는다. 최종 값은 hidden(in-dest)에 담긴다. */
+const DEST_SUB = {
+  '충청도': [['충청북도','충청북도'], ['충청남도','충청남도 (대전·세종 포함)']],
+  '전라도': [['전라북도','전라북도'], ['전라남도','전라남도 (광주 포함)']],
+  '경상도': [['경상북도','경상북도 (대구 포함)'], ['경상남도','경상남도 (부산·울산 포함)']],
+};
+(function(){
+  const group = document.getElementById('in-dest-group');
+  const sub   = document.getElementById('in-dest-sub');
+  const out   = document.getElementById('in-dest');
+
+  group.addEventListener('change', ()=>{
+    const g = group.value;
+    const subs = DEST_SUB[g];
+    if(subs){
+      sub.innerHTML = '<option value="">지역을 선택해 주세요</option>'
+        + subs.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
+      sub.classList.add('show');
+      out.value = '';                     // 세부 지역을 고르기 전까진 미선택 상태
+      // 새로 나타난 선택창이 하단 고정 버튼에 가려지지 않도록 화면 가운데로 끌어올린다
+      setTimeout(()=> document.getElementById('f-dest')
+        .scrollIntoView({block:'center', behavior:'smooth'}), 60);
+    }else{
+      sub.classList.remove('show');
+      sub.innerHTML = '';
+      out.value = g;
+    }
+    document.getElementById('f-dest').classList.remove('error');
+  });
+
+  sub.addEventListener('change', ()=>{
+    out.value = sub.value;
+    if(sub.value) document.getElementById('f-dest').classList.remove('error');
+  });
+})();
 
 // ---------- 포장 희망 일자: 커스텀 달력 ----------
 const today = new Date();
