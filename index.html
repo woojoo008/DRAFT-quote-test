@@ -505,7 +505,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <body>
@@ -859,41 +858,40 @@ document.addEventListener('focusin', (e)=>{
   }
 });
 
-// ===== EmailJS 설정 =====
-// https://www.emailjs.com 에서 무료 가입 후, 아래 3개 값을 채워 넣어야
-// 4페이지 도착 시 RICKY@CYHDS.COM 으로 자동 이메일이 발송됩니다.
-// (미설정 상태에서는 자동발송이 실행되지 않고 안내 문구만 표시됩니다.)
-const EMAILJS_PUBLIC_KEY = 'VtQ7iTht-GUlJUTpK';   // Account 탭의 Public Key
-const EMAILJS_SERVICE_ID = 'service_rcbap8a';   // Email Services 에서 만든 서비스 ID (ricky@cyhds.com SMTP)
-const EMAILJS_TEMPLATE_ID = 'template_zkkn5zd';  // Email Templates 에서 만든 템플릿 ID (담당자 수신용)
-const EMAILJS_CUSTOMER_TEMPLATE_ID = 'template_3ahnzpa';  // 고객용 견적서(PDF) 발송 템플릿 ID
-// ↑ 이 템플릿은 EmailJS 대시보드에서 아래처럼 설정되어 있어야 합니다:
-//   - To email: {{to_email}}
-//   - CC: ricky@cyhds.com (고정값으로 직접 입력하거나, {{cc_email}}로 연결해도 됨 — 코드에서 cc_email을 보내고 있음)
-//   - Subject: {{customer_name}} 님, ㈜현대해운 USA 에서 이주화물 운송에 대한 견적 안내 드립니다.
-//   - Body: 안내 문구(고정) + 아래 변수로 다운로드 링크 삽입
-//       {{quote_id}}  — 견적번호
-//       {{pdf_url}}   — 견적서 PDF 다운로드 링크 (버튼이나 <a href="{{pdf_url}}">로 넣기)
+/* ===========================================================================
+   서버 API
+   요금표 · EmailJS 키 · Cloudinary 시크릿 · Gemini 키는 모두 이 서버에만 있고
+   이 파일에는 남기지 않는다. 브라우저는 "얼마인지" 묻고 답만 받는다.
+   =========================================================================== */
+const API_BASE = 'https://hd-quote-api.woojoo008.workers.dev';
 
-// ===== Google Gemini API (사진 크기판단 · 항목 일치확인용) =====
-// 키는 더 이상 이 파일에 두지 않습니다. 대신 /api/analyze-photo.js 서버 함수가
-// Vercel 환경변수(GEMINI_API_KEY)에서 안전하게 읽어와 사용합니다.
-// → Vercel 대시보드 → Settings → Environment Variables 에서 GEMINI_API_KEY를 등록하세요.
+async function apiPost(path, payload){
+  const res = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload || {}),
+  });
+  if(!res.ok) throw new Error('api ' + path + ' ' + res.status);
+  return await res.json();
+}
 
-// ===== Cloudinary 설정 (사진 원본을 업로드하고 링크만 이메일에 담기 위함) =====
-const CLOUDINARY_CLOUD_NAME = 'sbzwquxg';
-const CLOUDINARY_UPLOAD_PRESET = 'a0bvqm1d';
+// ===== Cloudinary 업로드 =====
+// 시크릿 없이, 서버에서 받은 1회용 서명으로 업로드한다.
 async function uploadToCloudinary(dataUrl){
   try{
+    const sig = await apiPost('/api/sign-upload');
+    if(!sig || sig.error) return null;
     const fd = new FormData();
     fd.append('file', dataUrl);
-    fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    fd.append('api_key', sig.apiKey);
+    fd.append('timestamp', sig.timestamp);
+    fd.append('folder', sig.folder);
+    fd.append('signature', sig.signature);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
       method:'POST', body: fd
     });
     const data = await res.json();
     if(!res.ok || !data.secure_url){
-      // Cloudinary가 거부한 실제 이유를 그대로 로그에 남김 (원인 파악용)
       console.error('cloudinary upload rejected:', res.status, data?.error?.message || data);
     }
     return data.secure_url || null;
@@ -961,10 +959,6 @@ async function uploadGalleryPage(photoEntries, quoteId){
     return null;
   }
 }
-if(EMAILJS_PUBLIC_KEY && window.emailjs){
-  emailjs.init({publicKey: EMAILJS_PUBLIC_KEY});
-}
-
 const SECTIONS = [
   {id:'living', name:'거실', items:[
     {label:'장식장', cbm:0.874, icon:'wardrobe', size:'md', variantSet:'cabinet'},
@@ -1442,101 +1436,11 @@ SECTIONS.forEach(sec=>{
 // 고객 ZIP코드를 좌표로 바꾼 뒤, 아래 도시 목록 중 (도시 좌표 기준 반경 이내에 있는) 도시를 찾아
 // 그 도시의 할증금액을 적용하는 방식입니다. 예전의 "창고까지 거리(마일)" 기반 계산을 대체합니다.
 // 기준 3 CBM 가격(도시 할증 전)
-const BASE_PRICE_3CBM = 2000;
-
-// 도시 목록은 리키님이 작성하신 "도시별_할증_기준표.xlsx"를 그대로 옮긴 것입니다.
-// radius: 이 도시 좌표로부터 몇 마일 이내를 같은 요금으로 볼지, add: 그 지역 할증 금액($)
-const CITY_SURCHARGES = [
-  {city:'로스앤젤레스(LA 한인타운)', state:'CA', zip:'90005', lat:33.7866, lng:-118.2987, radius:20, add:0},
-  {city:'부에나파크/풀러턴', state:'CA', zip:'90621', lat:33.6403, lng:-117.7694, radius:20, add:0},
-  {city:'얼바인', state:'CA', zip:'92602', lat:33.718, lng:-117.7222, radius:20, add:0},
-  {city:'세리토스/라미라다', state:'CA', zip:'90703', lat:33.8669, lng:-118.0686, radius:30, add:0},
-  {city:'토런스/가디나', state:'CA', zip:'90503', lat:33.7866, lng:-118.2987, radius:40, add:0},
-  {city:'샌디에이고', state:'CA', zip:'92101', lat:32.7211, lng:-117.1744, radius:40, add:250},
-  {city:'샌프란시스코', state:'CA', zip:'94102', lat:37.7793, lng:-122.4166, radius:30, add:100},
-  {city:'산호세', state:'CA', zip:'95112', lat:37.37, lng:-121.8921, radius:30, add:100},
-  {city:'새크라멘토', state:'CA', zip:'95814', lat:38.5791, lng:-121.4809, radius:30, add:300},
-  {city:'시애틀/페더럴웨이', state:'WA', zip:'98003', lat:47.4323, lng:-121.8034, radius:40, add:100},
-  {city:'타코마', state:'WA', zip:'98402', lat:47.2615, lng:-122.4633, radius:40, add:250},
-  {city:'포틀랜드', state:'OR', zip:'97201', lat:45.4989, lng:-122.6932, radius:40, add:600},
-  {city:'유진', state:'OR', zip:'97401', lat:44.1179, lng:-123.0742, radius:40, add:900},
-  {city:'BOISE', state:'ID', zip:'83702', lat:43.662, lng:-116.195, radius:40, add:1500},
-  {city:'리노', state:'NV', zip:'89501', lat:39.6556, lng:-119.7046, radius:40, add:1300},
-  {city:'라스베가스', state:'NV', zip:'89101', lat:36.1737, lng:-115.1065, radius:40, add:1600},
-  {city:'피닉스', state:'AZ', zip:'85001', lat:33.704, lng:-112.3518, radius:40, add:1600},
-  {city:'투싼', state:'AZ', zip:'85701', lat:32.218, lng:-110.9709, radius:40, add:1800},
-  {city:'솔트레익시티', state:'UT', zip:'84101', lat:40.7561, lng:-111.9007, radius:40, add:1900},
-  {city:'덴버', state:'CO', zip:'80202', lat:39.7602, lng:-104.9966, radius:40, add:1900},
-  {city:'포트 콜린스', state:'CO', zip:'80521', lat:40.5923, lng:-105.2983, radius:40, add:2000},
-  {city:'콜로라드 스프링', state:'CO', zip:'80903', lat:38.8289, lng:-104.8099, radius:40, add:1800},
-  {city:'알버쿠키', state:'NM', zip:'87102', lat:35.0693, lng:-106.6485, radius:40, add:2100},
-  {city:'호놀룰루(오아후)', state:'HI', zip:'96813', lat:24.8598, lng:-168.0218, radius:40, add:1850},
-  {city:'시카고 다운타운', state:'IL', zip:'60601', lat:41.8119, lng:-87.6873, radius:10, add:200},
-  {city:'에반스톤', state:'IL', zip:'60201', lat:42.0491, lng:-87.7022, radius:10, add:200},
-  {city:'시카고 서버브', state:'IL', zip:'60630', lat:41.8119, lng:-87.6873, radius:30, add:0},
-  {city:'네이퍼빌', state:'IL', zip:'60540', lat:41.759, lng:-88.1524, radius:30, add:100},
-  {city:'샴페인', state:'IL', zip:'61820', lat:40.1018, lng:-88.1972, radius:30, add:450},
-  {city:'블루밍턴', state:'IN', zip:'47401', lat:39.0788, lng:-86.4351, radius:30, add:450},
-  {city:'샌루이스', state:'MO', zip:'63101', lat:38.6315, lng:-90.1923, radius:30, add:550},
-  {city:'아이오와 시티', state:'IA', zip:'52240', lat:41.6482, lng:-91.5416, radius:30, add:950},
-  {city:'데스 모이네스', state:'IA', zip:'50309', lat:41.5841, lng:-93.6203, radius:30, add:1100},
-  {city:'위스칸신', state:'WI', zip:'53703', lat:43.0531, lng:-89.3528, radius:30, add:600},
-  {city:'인디아나폴리스', state:'IN', zip:'46204', lat:39.7727, lng:-86.158, radius:30, add:550},
-  {city:'클리브랜드', state:'OH', zip:'44113', lat:41.4738, lng:-81.643, radius:30, add:1100},
-  {city:'톨래도', state:'OH', zip:'43604', lat:41.6558, lng:-83.5368, radius:40, add:900},
-  {city:'신시내티', state:'OH', zip:'45202', lat:39.1103, lng:-84.4861, radius:30, add:900},
-  {city:'미니애폴리스', state:'MN', zip:'55401', lat:44.9793, lng:-93.273, radius:40, add:800},
-  {city:'디트로이트/앤아버', state:'MI', zip:'48104', lat:42.2709, lng:-83.7278, radius:50, add:750},
-  {city:'그랜드 래피즈', state:'MI', zip:'49503', lat:42.9562, lng:-85.6607, radius:40, add:600},
-  {city:'랜싱', state:'MI', zip:'48933', lat:42.7314, lng:-84.5537, radius:40, add:700},
-  {city:'콜럼버스', state:'OH', zip:'43085', lat:40.0401, lng:-82.8972, radius:40, add:1100},
-  {city:'캔자스시티', state:'MO', zip:'64105', lat:39.1027, lng:-94.595, radius:40, add:1400},
-  {city:'댈러스/캐롤턴', state:'TX', zip:'75007', lat:33.0074, lng:-96.8959, radius:40, add:0},
-  {city:'샌안토니오', state:'TX', zip:'78205', lat:29.4241, lng:-98.4841, radius:40, add:900},
-  {city:'휴스턴', state:'TX', zip:'77036', lat:29.834, lng:-95.4342, radius:40, add:1200},
-  {city:'오스틴', state:'TX', zip:'78701', lat:30.2683, lng:-97.7414, radius:40, add:700},
-  {city:'바톤 로그', state:'LA', zip:'70801', lat:30.4492, lng:-91.1856, radius:50, add:1400},
-  {city:'애틀랜타/둘루스/스와니', state:'GA', zip:'30096', lat:33.9845, lng:-84.1529, radius:40, add:100},
-  {city:'웨스트포인트(기아공장)', state:'GA', zip:'31833', lat:32.9073, lng:-85.0775, radius:40, add:0},
-  {city:'ATHENS', state:'GA', zip:'30601', lat:33.9929, lng:-83.3537, radius:30, add:300},
-  {city:'콜럼버스', state:'GA', zip:'31901', lat:32.4729, lng:-84.9782, radius:30, add:400},
-  {city:'메이콘', state:'GA', zip:'31201', lat:32.8279, lng:-83.5951, radius:30, add:400},
-  {city:'멤피스', state:'TN', zip:'38103', lat:35.1549, lng:-90.0496, radius:30, add:850},
-  {city:'헌츠빌', state:'AL', zip:'35801', lat:34.7184, lng:-86.5564, radius:30, add:300},
-  {city:'낙스빌', state:'TN', zip:'37902', lat:35.945, lng:-83.8758, radius:30, add:400},
-  {city:'버밍헴', state:'AL', zip:'35203', lat:33.5192, lng:-86.8079, radius:30, add:300},
-  {city:'스타크빌', state:'MS', zip:'39759', lat:33.4255, lng:-88.8791, radius:30, add:550},
-  {city:'엔터프라이즈', state:'AL', zip:'36330', lat:31.3158, lng:-85.943, radius:30, add:800},
-  {city:'몽고메리(현대공장)', state:'AL', zip:'36104', lat:32.3738, lng:-86.2892, radius:40, add:500},
-  {city:'내슈빌', state:'TN', zip:'37201', lat:36.1657, lng:-86.7781, radius:40, add:550},
-  {city:'그린스빌', state:'NC', zip:'27834', lat:35.631, lng:-77.381, radius:40, add:600},
-  {city:'샬럿', state:'NC', zip:'28202', lat:35.2262, lng:-80.8435, radius:40, add:800},
-  {city:'콜럼비아', state:'SC', zip:'29201', lat:33.9875, lng:-81.0249, radius:40, add:800},
-  {city:'올랜도', state:'FL', zip:'32801', lat:28.5452, lng:-81.3733, radius:40, add:900},
-  {city:'마이애미', state:'FL', zip:'33101', lat:25.7791, lng:-80.1978, radius:40, add:1400},
-  {city:'탈라하시', state:'FL', zip:'32301', lat:30.4185, lng:-84.2034, radius:40, add:650},
-  {city:'잭슨빌', state:'FL', zip:'32202', lat:30.3284, lng:-81.656, radius:40, add:700},
-  {city:'뉴욕(맨하탄)', state:'NY', zip:'10001', lat:40.7504, lng:-73.9963, radius:10, add:300},
-  {city:'플러싱/퀸즈', state:'NY', zip:'11354', lat:40.7664, lng:-73.8262, radius:20, add:200},
-  {city:'버팔로', state:'NY', zip:'14202', lat:42.8897, lng:-78.8842, radius:40, add:1300},
-  {city:'시라큐스', state:'NY', zip:'13202', lat:43.0431, lng:-76.1508, radius:40, add:900},
-  {city:'로체스터', state:'NY', zip:'14604', lat:43.1566, lng:-77.604, radius:40, add:1100},
-  {city:'알바니', state:'NY', zip:'12207', lat:42.656, lng:-73.7508, radius:40, add:700},
-  {city:'뉴헤이븐', state:'CT', zip:'06510', lat:41.3098, lng:-72.9223, radius:30, add:300},
-  {city:'하트포드', state:'CT', zip:'06103', lat:41.7663, lng:-72.6746, radius:30, add:400},
-  {city:'포트리/팰리세이즈파크', state:'NJ', zip:'07024', lat:40.8487, lng:-73.974, radius:40, add:100},
-  {city:'필라델피아', state:'PA', zip:'19102', lat:39.9526, lng:-75.1665, radius:40, add:250},
-  {city:'핏츠버그', state:'PA', zip:'15222', lat:40.4344, lng:-80.0248, radius:40, add:1000},
-  {city:'해리스버그', state:'PA', zip:'17101', lat:40.2646, lng:-76.8696, radius:40, add:550},
-  {city:'보스턴', state:'MA', zip:'02108', lat:42.3538, lng:-71.1024, radius:40, add:600},
-  {city:'애난데일/페어팩스', state:'VA', zip:'22003', lat:38.8358, lng:-77.2128, radius:40, add:450},
-  {city:'워싱턴 D.C.', state:'DC', zip:'20001', lat:38.9119, lng:-77.0167, radius:40, add:550},
-  {city:'락빌', state:'MD', zip:'20850', lat:39.0896, lng:-77.1841, radius:40, add:600},
-];
-const DEST_RATES = {
-  '수도권':0, '강원도':150, '충청남도':250, '충청북도':150,
-  '전라북도':350, '전라남도':450, '경상북도':400, '경상남도':450, '제주도':1100,
-};
+/* ===========================================================================
+   금액 계산 — 전부 서버(/api/quote)에서 이뤄진다.
+   기본가, 도시별 할증표, 도착지 할증, CBM 단가는 이 파일에 존재하지 않는다.
+   브라우저는 부피(CBM)만 계산해서 보내고, 금액과 내역만 돌려받는다.
+   =========================================================================== */
 
 // 수량체크 항목(생활잔짐)의 부피는 사진이 없어 정확한 CBM을 모르니, 업계 표준 이사 박스 부피로 근사합니다.
 const BOX_CBM = {L:0.127, M:0.085, S:0.054};
@@ -1547,43 +1451,6 @@ const BOX_DIM = {
   M: {label:'의류&정장 (m)박스', w:25, d:17, h:16, real:0.174971417, load:0.300600895},
   S: {label:'책&그릇 (s)박스',   w:22, d:14, h:12, real:0.095102111, load:0.163385427},
 };
-
-function haversineMiles(lat1, lon1, lat2, lon2){
-  const R = 3958.8;
-  const toRad = d => d*Math.PI/180;
-  const dLat = toRad(lat2-lat1);
-  const dLon = toRad(lon2-lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-async function geocodeZip(zip){
-  try{
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    if(!res.ok) return null;
-    const data = await res.json();
-    const place = data.places && data.places[0];
-    if(!place) return null;
-    return {lat: parseFloat(place.latitude), lng: parseFloat(place.longitude)};
-  }catch(err){
-    console.error('geocode failed', err);
-    return null;
-  }
-}
-
-// 고객 좌표에서 반경 안에 들어오는 도시들을 모두 찾고, 겹치는 경우 할증금액이 더 높은 도시를 우선 적용
-function findCitySurcharge(lat, lng){
-  const matches = CITY_SURCHARGES
-    .map(c => ({...c, dist: haversineMiles(lat, lng, c.lat, c.lng)}))
-    .filter(c => c.dist <= c.radius);
-  if(matches.length === 0) return null;
-  matches.sort((a,b) => b.add - a.add || a.dist - b.dist); // 할증 높은 순 우선, 동률이면 더 가까운 쪽
-  return matches[0];
-}
-
-function residenceSurcharge(){
-  return state.customer.floorCategory === 'elevNo' ? 200 : 0;
-}
 
 function computeTotalCbm(){
   let total = 0;
@@ -1600,48 +1467,35 @@ function computeTotalCbm(){
   return total;
 }
 
-function additionalCbmCost(totalCbm){
-  if(totalCbm <= 3) return 0;
-  const extra = totalCbm - 3;
-  const rate = totalCbm < 4 ? 350 : 300; // 4 CBM 미만이면 추가 1 CBM당 $350, 4 이상이면 $300
-  return extra * rate;
-}
-
-// main entry point: returns either {contactNeeded:true, ...} or a full breakdown
-// ZIP → 도시매칭 → 도착지/거주형태 할증까지 묶어서 계산하는 공용 헬퍼.
-// PDF 견적서(페이지별로 총 부피가 다름)와 화면상 견적 계산이 같은 로직을 쓰도록 분리함.
-async function getPricingContext(){
-  const geo = await geocodeZip(state.customer.zip);
-  if(!geo){
-    return {error: true, message: 'ZIP 코드를 확인할 수 없어요. 다시 확인해 주세요.'};
+// 여러 부피를 한 번에 서버에 보내 각각의 금액을 받는다.
+// (견적서 PDF가 "사진 품목만"과 "박스 포함" 두 가지 금액을 필요로 함)
+async function priceVolumes(volumes){
+  try{
+    const data = await apiPost('/api/quote', {
+      zip: state.customer.zip,
+      dest: state.customer.dest,
+      floorCategory: state.customer.floorCategory,
+      volumes,
+    });
+    return data;
+  }catch(err){
+    console.error('price request failed', err);
+    return {error: true, message: '금액을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'};
   }
-  const matchedCity = findCitySurcharge(geo.lat, geo.lng);
-  if(!matchedCity){
-    return {contactNeeded: true, geo};
-  }
-  const destRate = DEST_RATES[state.customer.dest] || 0;
-  const resSurcharge = residenceSurcharge();
-  return {matchedCity, destRate, resSurcharge};
 }
 
-// 한국 도착지역 할증 + 거주형태(엘리베이터) 할증은 모두 "기본 3큐빅" 금액에 합쳐서 표시함
-function priceForVolume(totalCbm, ctx){
-  const combinedBase = BASE_PRICE_3CBM + ctx.matchedCity.add + ctx.destRate + ctx.resSurcharge;
-  const cbmCost = additionalCbmCost(totalCbm);
-  return {combinedBase, cbmCost, total: combinedBase + cbmCost, extraRate: totalCbm < 4 ? 350 : 300};
-}
-
+// 화면 표시용 — 기존과 같은 모양의 결과를 돌려준다
 async function calculateEstimate(){
-  const ctx = await getPricingContext();
-  if(ctx.error || ctx.contactNeeded) return ctx;
-  const totalCbm = computeTotalCbm();
-  const priced = priceForVolume(totalCbm, ctx);
+  const data = await priceVolumes([computeTotalCbm()]);
+  if(data.error || data.contactNeeded) return data;
+  const r = data.results[0];
   return {
-    total: priced.total, matchedCity: ctx.matchedCity, totalCbm,
-    breakdown: {baseRate: BASE_PRICE_3CBM, cityAdd: ctx.matchedCity.add, cityName: ctx.matchedCity.city, destRate: ctx.destRate, resSurcharge: ctx.resSurcharge, cbmCost: priced.cbmCost},
+    total: r.total,
+    matchedCity: data.matchedCity,
+    totalCbm: r.totalCbm,
+    breakdown: r.breakdown,
   };
 }
-
 
 function findCat(id){
   for(const sec of SECTIONS){
@@ -1676,18 +1530,18 @@ function updateQty(cat, delta){
   updateBar2();
 }
 
-async function sendEmailWithRetry(serviceId, templateId, params, retries=4){
+// 메일 발송은 서버(/api/send-email)가 담당한다. 수신 주소도 서버가 정하므로
+// 이 파일을 고쳐서 다른 주소로 메일을 빼돌릴 수 없다.
+async function sendEmailWithRetry(kind, params, retries=2){
   for(let attempt=0; attempt<=retries; attempt++){
     try{
-      await emailjs.send(serviceId, templateId, params);
-      return true;
+      const res = await apiPost('/api/send-email', {kind, params});
+      if(res && res.ok) return true;
+      if(res && res.configured === false) return false;   // 서버에 키 미설정 — 재시도 무의미
     }catch(err){
       console.error(`email send failed (attempt ${attempt+1}/${retries+1})`, err);
-      if(attempt < retries){
-        const delayMs = 1500 * (attempt + 1); // 1.5s, 3s, 4.5s, 6s — back off a bit more each time
-        await new Promise(r=>setTimeout(r, delayMs));
-      }
     }
+    if(attempt < retries) await new Promise(r=>setTimeout(r, 1500 * (attempt + 1)));
   }
   return false;
 }
@@ -2452,7 +2306,7 @@ async function handleCapturedPhoto(file){
   try{
     const dataUrl = await resizeImage(file, 700, 0.6);
     const cloudUrl = await uploadToCloudinary(dataUrl);
-    const {tier, matches, quotaIssue} = await analyzePhoto(cat, dataUrl, activeVariantKey);
+    const {tier, matches, quotaIssue} = await analyzePhoto(cat, cloudUrl, activeVariantKey);
     if(quotaIssue){
       showToast('<a href="sms:3196600001" style="color:#7a5a00;text-decoration:none;display:block;">현재 이용자가 많아 AI 사진 확인이 어려우니, 문자 주시기 바랍니다.<br><b style="text-decoration:underline;">TEXT : 319-660-0001</b></a>');
     }
@@ -2622,24 +2476,20 @@ function resizeImage(file, maxDim, quality){
 
 // AI가 사진 속 물건이 기준 크기보다 큰지/작은지 판단 — 실제 Gemini 호출은
 // 서버 함수(/api/analyze-photo)가 담당하므로 이 파일에는 키가 없습니다.
-async function analyzePhoto(cat, dataUrl, variantKey){
+// 사진은 이미 Cloudinary에 올라가 있으므로 URL만 보낸다.
+// 700KB짜리 base64를 통째로 올려보내던 것에 비해 사진 한 장당 1~2초가 빨라진다.
+async function analyzePhoto(cat, imageUrl, variantKey){
   try{
-    const base64 = dataUrl.split(',')[1];
+    if(!imageUrl) return {tier: 0, matches: true, quotaIssue: false};
     // 구성이 선택된 항목은 그 구성의 대표 부품 크기를 기준으로 판정한다
     const vParts = variantKey ? variantParts(cat.label, variantKey) : null;
     const dim = vParts ? vParts[0] : DIM_DATA[norm(cat.label)];
     const dimText = dim ? `이 항목의 일반적인 기준 크기는 가로 ${dim.w}인치 x 세로 ${dim.d}인치 x 높이 ${dim.h}인치입니다.` : '';
-    const response = await fetch('/api/analyze-photo', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        base64,
-        mimeType: 'image/jpeg',
-        catLabel: (vParts ? vParts[0].name : cat.label),
-        dimText
-      })
+    const parsed = await apiPost('/api/analyze-photo', {
+      imageUrl,
+      catLabel: (vParts ? vParts[0].name : cat.label),
+      dimText
     });
-    const parsed = await response.json();
     let tier = parseInt(parsed.tier);
     if(!Number.isInteger(tier) || tier<-10 || tier>10) tier = 0;
     const matches = parsed.matches !== false; // 응답이 애매하면 기본은 true(통과)로 처리
@@ -3065,8 +2915,6 @@ async function generateQuotePdf(quoteId){
     return null;
   }
   try{
-    const ctx = await getPricingContext();
-    const contactNeeded = !!(ctx.error || ctx.contactNeeded);
     const dateStr = new Date().toLocaleDateString('ko-KR');
 
     const photoRows = buildPhotoRowsForPdf();
@@ -3075,8 +2923,11 @@ async function generateQuotePdf(quoteId){
       rows: [...photoRows.rows, ...boxRows.rows],
       totalLoad: photoRows.totalLoad + boxRows.totalLoad,
     };
-    const priced1 = contactNeeded ? null : priceForVolume(photoRows.totalLoad, ctx);
-    const priced2 = contactNeeded ? null : priceForVolume(combinedRows.totalLoad, ctx);
+    // 두 페이지의 금액(사진 품목만 / 박스 포함)을 서버에 한 번에 물어본다
+    const priceData = await priceVolumes([photoRows.totalLoad, combinedRows.totalLoad]);
+    const contactNeeded = !!(priceData.error || priceData.contactNeeded);
+    const priced1 = contactNeeded ? null : priceData.results[0];
+    const priced2 = contactNeeded ? null : priceData.results[1];
 
     const { jsPDF } = window.jspdf;
     const canvas1 = await renderPdfPageToCanvas(pdfPageHtml(photoRows, priced1, quoteId, dateStr, contactNeeded));
@@ -3225,7 +3076,6 @@ async function submitQuote(id){
   }
 
   const templateParams = {
-    to_email: 'RICKY@CYHDS.COM',
     quote_id: id,
     customer_name: state.customer.name,
     customer_email: state.customer.email,
@@ -3242,26 +3092,22 @@ async function submitQuote(id){
     estimate_html: buildEstimateEmailHtml(estimate),
   };
 
-  let staffOk = false;
-  if(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && window.emailjs){
-    staffOk = await sendEmailWithRetry(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-  }
+  const staffOk = await sendEmailWithRetry('staff', templateParams);
 
   // ---- 고객용 견적서(PDF) 이메일 — 담당자 이메일과는 별개로 자동 발송됨 ----
   let customerOk = false;
-  if(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_CUSTOMER_TEMPLATE_ID && window.emailjs && state.customer.email){
+  if(state.customer.email){
     try{
       const pdfDataUri = await generateQuotePdf(id);
       const pdfUrl = pdfDataUri ? await uploadToCloudinary(pdfDataUri) : null;
       if(pdfUrl){
         const customerParams = {
           to_email: state.customer.email,
-          cc_email: 'ricky@cyhds.com', // EmailJS 템플릿의 CC 필드에 {{cc_email}}로 연결해 두어야 함
           customer_name: state.customer.name,
           quote_id: id,
           pdf_url: pdfUrl,
         };
-        customerOk = await sendEmailWithRetry(EMAILJS_SERVICE_ID, EMAILJS_CUSTOMER_TEMPLATE_ID, customerParams);
+        customerOk = await sendEmailWithRetry('customer', customerParams);
       }else{
         console.error('견적서 PDF 업로드 실패 — 고객 이메일을 보내지 못함');
       }
@@ -3271,8 +3117,7 @@ async function submitQuote(id){
   }
 
   // 결과만 돌려주고, 화면 표시는 applySubmitResult()가 담당한다
-  const configured = !!(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID);
-  return {configured, staffOk, customerOk, timedOut:false};
+  return {configured: true, staffOk, customerOk, timedOut:false};
 }
 
 function escapeHtml(s){
