@@ -225,15 +225,21 @@
   .custom-section{display:flex;flex-direction:column;gap:16px;grid-column:1 / -1;width:100%;}
   .add-slot-card{border-style:dashed;justify-content:center;}
   .add-slot-plus{font-size:30px;font-weight:800;color:var(--orange-dark);}
+  .custom-note-wrap{
+    background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;
+    box-sizing:border-box;
+  }
   .custom-note{
-    width:100%;min-height:165px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);
-    font-size:14px;color:var(--ink);background:#fff;resize:vertical;font-family:inherit;line-height:1.5;
+    width:100%;min-height:150px;padding:0;border:none;border-radius:0;
+    font-size:14px;color:var(--ink);background:transparent;resize:vertical;font-family:inherit;line-height:1.5;
     box-sizing:border-box;display:block;
   }
-  .custom-note:focus{outline:none;border-color:var(--navy-2);}
+  .custom-note:focus{outline:none;}
+  .custom-note-wrap:focus-within{border-color:var(--navy-2);}
   /* 안내 문구 — placeholder는 입력을 시작하면 사라지므로 별도 요소로 항상 보이게 둔다 */
   .custom-note-hint{
-    margin-top:8px;font-size:12px;color:var(--muted);line-height:1.55;
+    margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+    font-size:12px;color:var(--muted);line-height:1.55;
     display:flex;gap:6px;align-items:flex-start;
   }
   .custom-note-hint::before{content:'※';color:var(--orange-dark);flex-shrink:0;}
@@ -427,6 +433,24 @@
   .modal-btn{flex:1;padding:13px 8px;border-radius:11px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:700;cursor:pointer;}
   .modal-btn.o{border-color:var(--success);color:var(--success);}
   .modal-btn.x{border-color:var(--danger);color:var(--danger);}
+  /* 구성 선택(Both / Mattress / Frame · Both / Table / Chair) */
+  .variant-btns{display:flex;flex-direction:column;gap:9px;}
+  .variant-btn{
+    width:100%;padding:13px 14px;border-radius:11px;border:1.5px solid var(--line);
+    background:#fff;cursor:pointer;text-align:left;display:flex;align-items:baseline;gap:8px;
+  }
+  .variant-btn:active{border-color:var(--orange);background:#fffaf5;}
+  .variant-btn .vk{font-size:14.5px;font-weight:800;color:var(--navy);}
+  .variant-btn .vd{font-size:12px;color:var(--muted);}
+  .variant-cancel{
+    margin-top:12px;width:100%;padding:11px;border:none;background:none;
+    font-size:13px;color:var(--muted);cursor:pointer;
+  }
+  /* 아이템 카드에 선택된 구성 표시 */
+  .variant-tag{
+    position:absolute;left:6px;bottom:6px;background:var(--navy);color:#fff;
+    font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:2px 6px;border-radius:6px;
+  }
   .assembly-tag{
     position:absolute;bottom:6px;left:6px;font-size:9.5px;font-weight:800;border-radius:6px;
     padding:1px 5px;background:#eef7f0;color:var(--success);
@@ -732,6 +756,15 @@
     </div>
   </div>
 
+  <div class="modal-overlay hidden" id="variant-modal">
+    <div class="modal-card">
+      <div class="modal-title" id="variant-modal-title">구성 선택</div>
+      <div class="modal-sub" id="variant-modal-sub">어떤 구성으로 보내시나요? 선택 후 촬영이 시작돼요.</div>
+      <div class="variant-btns" id="variant-btns"></div>
+      <button class="variant-cancel" id="variant-cancel">취소</button>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="assembly-modal">
     <div class="modal-card">
       <div class="modal-title" id="assembly-modal-title">분해 가능 여부</div>
@@ -935,9 +968,7 @@ const SECTIONS = [
     {label:'스탠딩 에어컨', cbm:1.141, icon:'standing-ac'},
     {label:'소파옆 협탁', cbm:0.391, icon:'side-table'},
     {label:'커피 테이블', cbm:0.874, icon:'coffee-table2'},
-    {label:'그랜드피아노 (대)', cbm:6.189, icon:'piano', size:'xl'},
-    {label:'그랜드피아노 (중)', cbm:5.27, icon:'piano', size:'lg'},
-    {label:'베이비 그랜드피아노', cbm:4.506, icon:'piano', size:'lg'},
+    {label:'그랜드 피아노', cbm:5.27, icon:'piano', size:'xl'},
     {label:'upright 피아노', cbm:3.048, icon:'piano', size:'md'},
     {label:'전자피아노', cbm:0.764, icon:'piano', size:'sm'},
     {label:'마사지(안마)의자', cbm:2.015, icon:'massage-chair'},
@@ -951,17 +982,17 @@ const SECTIONS = [
     {label:'카페트/돗자리', icon:'rug'},
     {label:'장식품 (스탠딩)', icon:'figurine'},
     {label:'조각', icon:'landmark'},
-    {label:'스피커', icon:'speaker'},
-    {label:"TV (65'기준)", cbm:0.508, icon:'tv'},
+    {label:'작은 스피커', icon:'speaker'},
+    {label:'TV', cbm:0.508, icon:'tv'},
     {label:'TV 캐비닛', cbm:0.708, icon:'tv-cabinet'},
   ]},
   {id:'bedroom', name:'침실', items:[
-    {label:'CK침대', cbm:4.403, icon:'bed', size:'xl'},
-    {label:'K침대', cbm:3.975, icon:'bed', size:'lg'},
-    {label:'Q침대', cbm:3.092, icon:'bed', size:'md'},
-    {label:'D침대', cbm:2.883, icon:'bed', size:'sm'},
-    {label:'s침대', cbm:2.254, icon:'bed', size:'sm'},
-    {label:'이층침대', cbm:4.681, icon:'bed', size:'lg'},
+    {label:'CK침대', cbm:4.403, icon:'bed', size:'xl', variantSet:'bed'},
+    {label:'K침대', cbm:3.975, icon:'bed', size:'lg', variantSet:'bed'},
+    {label:'Q침대', cbm:3.354, icon:'bed', size:'md', variantSet:'bed'},
+    {label:'D침대', cbm:2.707, icon:'bed', size:'sm', variantSet:'bed'},
+    {label:'S침대', cbm:2.005, icon:'bed', size:'sm', variantSet:'bed'},
+    {label:'이층침대', cbm:4.681, icon:'bed', size:'lg', variantSet:'bed'},
     {label:'돌 침대', cbm:3.558, icon:'bed', size:'lg'},
     {label:'(아기) 침대, CRIB', cbm:1.849, icon:'crib'},
     {label:'화장대', cbm:1.282, icon:'vanity'},
@@ -981,9 +1012,7 @@ const SECTIONS = [
   {id:'study', name:'공부방', items:[
     {label:'책상(중):분해(O,X)', cbm:1.123, icon:'desk', size:'md', needsAssembly:true},
     {label:'책상(대):분해(O,X)', cbm:1.645, icon:'desk', size:'lg', needsAssembly:true},
-    {label:'책장 (소)', cbm:0.335, icon:'bookshelf', size:'sm'},
-    {label:'책장 (중)', cbm:0.677, icon:'bookshelf', size:'md'},
-    {label:'책장 (대)', cbm:1.32, icon:'bookshelf', size:'lg'},
+    {label:'책장', cbm:0.677, icon:'bookshelf', size:'md', variantSet:'bookshelf'},
     {label:'사무용 의자', cbm:0.822, icon:'office-chair'},
     {label:'일반 의자', cbm:0.584, icon:'plain-chair'},
     {label:'책상용 작은 서랍장', cbm:0.313, icon:'archive'},
@@ -1002,14 +1031,10 @@ const SECTIONS = [
   {id:'kitchen', name:'부엌', items:[
     {label:'허리높이 김치냉장고', cbm:1.057, icon:'refrigerator', size:'sm'},
     {label:'standing 김치냉장고', cbm:1.584, icon:'refrigerator', size:'md'},
-    {label:'식탁 2인 Table', cbm:0.312, icon:'dining-table2', size:'sm'},
-    {label:'식탁 4인 Table', cbm:0.58, icon:'dining-table2', size:'md'},
-    {label:'식탁 6인 Table', cbm:0.823, icon:'dining-table2', size:'lg'},
-    {label:'식탁 8인 Table', cbm:1.227, icon:'dining-table2', size:'xl'},
-    {label:'식탁 2인 Chair', cbm:0.789, icon:'dining-chair2', size:'sm'},
-    {label:'식탁 4인 Chair', cbm:1.577, icon:'dining-chair2', size:'sm'},
-    {label:'식탁 6인 Chair', cbm:2.366, icon:'dining-chair2', size:'md'},
-    {label:'식탁 8인 Chair', cbm:3.155, icon:'dining-chair2', size:'lg'},
+    {label:'2인 식탁', cbm:1.011, icon:'dining-table2', size:'sm', variantSet:'dining'},
+    {label:'4인 식탁', cbm:1.971, icon:'dining-table2', size:'md', variantSet:'dining'},
+    {label:'6인 식탁', cbm:2.887, icon:'dining-table2', size:'lg', variantSet:'dining'},
+    {label:'8인 식탁', cbm:4.078, icon:'dining-table2', size:'xl', variantSet:'dining'},
     {label:'그릇', icon:'bowl'},
     {label:'전기밥솥', icon:'rice-cooker'},
     {label:'커피머신', icon:'coffee'},
@@ -1092,10 +1117,10 @@ const DIM_DATA = {
   '콘솔': {w:47, d:16, h:31, realcbm:0.6, qty:1, loadcbm:0.774},
   '에어컨벽걸이': {w:33, d:8, h:12, realcbm:0.185, qty:1, loadcbm:0.61},
   '소파1인armchair': {w:35, d:35, h:33, realcbm:1.04, qty:1, loadcbm:1.404},
-  '그랜드피아노대': {w:59, d:79, h:40, realcbm:4.797, qty:1, loadcbm:6.189},
+  '그랜드피아노': {w:59, d:69, h:39, realcbm:4.085, qty:1, loadcbm:5.27},  // 대/중/베이비를 하나로 통합 — 중형 기준값
   '소파2인loveseat': {w:59, d:35, h:33, realcbm:1.753, qty:1, loadcbm:2.367},
   '그랜드피아노중': {w:59, d:69, h:39, realcbm:4.085, qty:1, loadcbm:5.27},
-  'tv65기준': {w:64, d:6, h:35, realcbm:0.346, qty:1, loadcbm:0.508},
+  'tv': {w:64, d:6, h:35, realcbm:0.346, qty:1, loadcbm:0.508},
   '소파3인': {w:83, d:35, h:33, realcbm:2.467, qty:1, loadcbm:3.157},
   '베이비그랜드피아노': {w:59, d:59, h:39, realcbm:3.493, qty:1, loadcbm:4.506},
   'tv캐비닛': {w:59, d:16, h:18, realcbm:0.437, qty:1, loadcbm:0.708},
@@ -1104,10 +1129,10 @@ const DIM_DATA = {
   '협탁': {w:22, d:18, h:32, realcbm:0.326, qty:1, loadcbm:0.486},
   'k침대': {w:70, d:78, h:23, realcbm:3.231, qty:1, loadcbm:3.975},
   '아기침대crib': {w:28, d:51, h:39, realcbm:1.433, qty:1, loadcbm:1.849},
-  'q침대': {w:59, d:72, h:23, realcbm:2.514, qty:1, loadcbm:3.092},
+  'q침대': {w:64, d:72, h:23, realcbm:2.727, qty:1, loadcbm:3.354},
   '화장대': {w:39, d:18, h:55, realcbm:0.993, qty:1, loadcbm:1.282},
-  'd침대': {w:55, d:72, h:23, realcbm:2.344, qty:1, loadcbm:2.883},
-  's침대': {w:43, d:72, h:23, realcbm:1.832, qty:1, loadcbm:2.254},
+  'd침대': {w:54, d:72, h:22, realcbm:2.201, qty:1, loadcbm:2.707},
+  's침대': {w:40, d:72, h:22, realcbm:1.630, qty:1, loadcbm:2.005},
   '문갑': {w:35, d:16, h:44, realcbm:0.634, qty:1, loadcbm:0.818},
   '이층침대': {w:39, d:79, h:48, realcbm:3.805, qty:1, loadcbm:4.681},
   '고가구코너장': {w:28, d:28, h:59, realcbm:1.19, qty:1, loadcbm:1.535},
@@ -1163,10 +1188,10 @@ const FORMULA_DATA = {
   '콘솔': {w:47, d:16, h:31, mult:1.29, ea:1},
   '에어컨벽걸이': {w:33, d:8, h:12, mult:3.29, ea:1},
   '소파1인armchair': {w:35, d:35, h:33, mult:1.35, ea:1},
-  '그랜드피아노대': {w:59, d:79, h:40, mult:1.29, ea:1},
+  '그랜드피아노': {w:59, d:69, h:39, mult:1.29, ea:1},
   '소파2인loveseat': {w:59, d:35, h:33, mult:1.35, ea:1},
   '그랜드피아노중': {w:59, d:69, h:39, mult:1.29, ea:1},
-  'tv65기준': {w:64, d:6, h:35, mult:1.47, ea:1},
+  'tv': {w:64, d:6, h:35, mult:1.47, ea:1},
   '소파3인': {w:83, d:35, h:33, mult:1.28, ea:1},
   '베이비그랜드피아노': {w:59, d:59, h:39, mult:1.29, ea:1},
   'tv캐비닛': {w:59, d:16, h:18, mult:1.62, ea:1},
@@ -1175,10 +1200,10 @@ const FORMULA_DATA = {
   '협탁': {w:22, d:18, h:32, mult:1.49, ea:1},
   'k침대': {w:70, d:78, h:23, mult:1.23, ea:1},
   '아기침대crib': {w:28, d:51, h:39, mult:1.29, ea:1},
-  'q침대': {w:59, d:72, h:23, mult:1.23, ea:1},
+  'q침대': {w:64, d:72, h:23, mult:1.23, ea:1},
   '화장대': {w:39, d:18, h:55, mult:1.29, ea:1},
-  'd침대': {w:55, d:72, h:23, mult:1.23, ea:1},
-  's침대': {w:43, d:72, h:23, mult:1.23, ea:1},
+  'd침대': {w:54, d:72, h:22, mult:1.23, ea:1},
+  's침대': {w:40, d:72, h:22, mult:1.23, ea:1},
   '문갑': {w:35, d:16, h:44, mult:1.29, ea:1},
   '이층침대': {w:39, d:79, h:48, mult:1.23, ea:1},
   '고가구코너장': {w:28, d:28, h:59, mult:1.29, ea:1},
@@ -1216,8 +1241,118 @@ const FORMULA_DATA = {
   '세탁기': {w:24, d:26, h:44, mult:1.62, ea:1},
   '건조기': {w:24, d:26, h:44, mult:1.62, ea:1},
 };
+// ============================================================================
+//  구성 선택(Variant) — 침대: Both / Mattress / Frame,  식탁: Both / Table / Chair
+//  ★ 값을 바꾸려면 아래 VARIANT_DATA 의 숫자만 고치면 됩니다. 견적 계산과
+//    견적서(PDF) 표, 담당자 메일 표에 그대로 반영됩니다.
+//      w,d,h : 가로 / 세로 / 높이 (inch)
+//      real  : 실포장 CBM (1회 촬영 기준)
+//      load  : 적재 CBM  (1회 촬영 기준 — 견적 금액은 이 값으로 계산됨)
+//  ※ 침대의 mattress / frame 값은 아직 실측 전이라 both 값을 높이 비율로 나눈
+//    임시값입니다. 실제 수치를 주시면 이 표만 교체하면 됩니다.
+// ============================================================================
+const VARIANT_SETS = {
+  bed: [
+    {key:'both',     label:'Both',     desc:'매트리스 + 프레임'},
+    {key:'mattress', label:'Mattress', desc:'매트리스만'},
+    {key:'frame',    label:'Frame',    desc:'프레임만'},
+  ],
+  dining: [
+    {key:'both',  label:'Both',  desc:'식탁 + 의자'},
+    {key:'table', label:'Table', desc:'식탁만'},
+    {key:'chair', label:'Chair', desc:'의자만'},
+  ],
+  bookshelf: [
+    {key:'large',  label:'대', desc:'높이 70inch 이상'},
+    {key:'medium', label:'중', desc:'높이 42inch 이상'},
+    {key:'small',  label:'소', desc:'그 이하'},
+  ],
+};
+
+const VARIANT_DATA = {
+  // 침대 — both / mattress / frame 모두 엑셀(앱용 물품리스트) 실측값
+  'CK침대': {
+    both:     [{name:'CK침대 (매트리스+프레임)', w:72, d:84, h:23, real:3.579, load:4.403}],
+    mattress: [{name:'CK침대 매트리스',          w:86, d:56, h:16, real:1.983, load:2.300}],
+    frame:    [{name:'CK침대 프레임',            w:86, d:56, h:16, real:1.983, load:2.300}],
+  },
+  'K침대': {
+    both:     [{name:'K침대 (매트리스+프레임)', w:70, d:78, h:23, real:3.231, load:3.975}],
+    mattress: [{name:'K침대 매트리스',          w:80, d:52, h:16, real:1.713, load:1.987}],
+    frame:    [{name:'K침대 프레임',            w:80, d:52, h:16, real:1.713, load:1.987}],
+  },
+  'Q침대': {
+    both:     [{name:'Q침대 (매트리스+프레임)', w:64, d:72, h:23, real:2.727, load:3.354}],
+    mattress: [{name:'Q침대 매트리스',          w:72, d:52, h:14, real:1.349, load:1.551}],
+    frame:    [{name:'Q침대 프레임',            w:72, d:52, h:16, real:1.541, load:1.773}],
+  },
+  'D침대': {
+    both:     [{name:'D침대 (매트리스+프레임)', w:54, d:72, h:22, real:2.201, load:2.707}],
+    mattress: [{name:'D침대 매트리스',          w:60, d:52, h:13, real:1.044, load:1.200}],
+    frame:    [{name:'D침대 프레임',            w:60, d:52, h:14, real:1.124, load:1.293}],
+  },
+  'S침대': {
+    both:     [{name:'S침대 (매트리스+프레임)', w:40, d:72, h:22, real:1.630, load:2.005}],
+    mattress: [{name:'S침대 매트리스',          w:50, d:52, h:13, real:0.870, load:1.000}],
+    frame:    [{name:'S침대 프레임',            w:50, d:52, h:12, real:0.803, load:0.923}],
+  },
+  // ※ 이층침대는 엑셀에 매트리스/프레임 행이 없어 both 값을 높이 비율로 나눈 임시값입니다.
+  '이층침대': {
+    both:     [{name:'이층침대 (매트리스+프레임)', w:39, d:79, h:48, real:3.805, load:4.681}],
+    mattress: [{name:'이층침대 매트리스 2개',      w:39, d:79, h:16, real:1.268, load:1.560}],
+    frame:    [{name:'이층침대 프레임',            w:39, d:79, h:32, real:2.537, load:3.121}],
+  },
+  // 식탁 — both 는 엑셀의 "N인 식탁 세트" 행(세트로 적재할 때의 값), table/chair 는 개별 행
+  '2인 식탁': {
+    both:  [{name:'2인 식탁 세트 (식탁+의자 2개)', w:28, d:31, h:33, real:0.784, load:1.011}],
+    table: [{name:'2인 식탁 테이블',    w:28, d:28, h:12, real:0.242, load:0.312}],
+    chair: [{name:'2인 식탁 의자 (2개)', w:18, d:20, h:33, real:0.306, load:0.789}],
+  },
+  '4인 식탁': {
+    both:  [{name:'4인 식탁 세트 (식탁+의자 4개)', w:47, d:36, h:33, real:1.528, load:1.971}],
+    table: [{name:'4인 식탁 테이블',    w:47, d:31, h:12, real:0.450, load:0.580}],
+    chair: [{name:'4인 식탁 의자 (4개)', w:18, d:20, h:33, real:0.306, load:1.577}],
+  },
+  '6인 식탁': {
+    both:  [{name:'6인 식탁 세트 (식탁+의자 6개)', w:59, d:42, h:33, real:2.238, load:2.887}],
+    table: [{name:'6인 식탁 테이블',    w:59, d:35, h:12, real:0.638, load:0.823}],
+    chair: [{name:'6인 식탁 의자 (6개)', w:18, d:20, h:33, real:0.306, load:2.366}],
+  },
+  '8인 식탁': {
+    both:  [{name:'8인 식탁 세트 (식탁+의자 8개)', w:79, d:43, h:34, real:3.161, load:4.078}],
+    table: [{name:'8인 식탁 테이블',    w:79, d:39, h:12, real:0.951, load:1.227}],
+    chair: [{name:'8인 식탁 의자 (8개)', w:18, d:20, h:33, real:0.306, load:3.155}],
+  },
+  '책장': {
+    large:  [{name:'책장 (대)', w:35, d:16, h:71, real:1.023, load:1.320}],
+    medium: [{name:'책장 (중)', w:31, d:14, h:47, real:0.525, load:0.677}],
+    small:  [{name:'책장 (소)', w:24, d:12, h:35, real:0.259, load:0.335}],
+  },
+};
+
+// 해당 항목/구성의 부품 목록 (없으면 null → 기존 DIM_DATA 경로로 동작)
+function variantParts(catLabel, key){
+  const set = VARIANT_DATA[catLabel];
+  if(!set) return null;
+  return set[key] || set.both || null;
+}
+// 해당 구성의 적재 CBM 합계 — 견적 금액 계산에 쓰이는 값
+function variantCbm(catLabel, key){
+  const parts = variantParts(catLabel, key);
+  if(!parts) return null;
+  return parts.reduce((sum,p)=> sum + p.load, 0);
+}
+function variantOptions(cat){
+  return cat && cat.variantSet ? VARIANT_SETS[cat.variantSet] : null;
+}
+function variantLabelOf(cat, key){
+  const opts = variantOptions(cat);
+  const found = opts && opts.find(o=>o.key===key);
+  return found ? found.label : '';
+}
+
 const QTY_LABELS = [
-  '액자(대):72inch','액자(중):36inch','액자(소):18inch','도자기','카페트/돗자리','장식품 (스탠딩)','조각','스피커',
+  '액자(대):72inch','액자(중):36inch','액자(소):18inch','도자기','카페트/돗자리','장식품 (스탠딩)','조각','작은 스피커',
   '전기장판','램프','가습기','이불','거울','옷 & 의류','스탠드',
   '컴퓨터','프린터','LP, CD, DVD','레고,Figure','책','문구류 및 잡화','서류 및 파일',
   '그릇','전기밥솥','커피머신','냄비','부엌잡화','주방기구','전자레인지','정수기','교자상','식기세척기','식기건조기',
@@ -1230,7 +1365,7 @@ const SIZE_DATA = {
   '장식품스탠딩': 'S',
   '조각': 'S',
   '액자대72inch': 'M',
-  '스피커': 'S',
+  '작은스피커': 'S',
   '액자중36inch': 'S',
   '액자소18inch': 'S',
   '램프': 'S',
@@ -1559,6 +1694,7 @@ const state = {
   items:[] // {catId,label,min,max,cuft,note,photo}
 };
 let activeCatId = null;
+let activeVariantKey = null;   // 구성 선택(Both/Mattress/Frame, Both/Table/Chair) — 촬영 직전에 정해짐
 let customSlots = [null, null]; // each entry: null (empty "사진찍기" box) or {photo, cloudUrl}
 let customNote = '';
 let activeCustomSlotIndex = null;
@@ -1943,8 +2079,10 @@ function renderCustomSection(){
   listEl.innerHTML = `
     <div class="custom-section">
       <div class="item-cards">${slotsHtml}${addBoxHtml}</div>
-      <textarea id="custom-note" class="custom-note" placeholder="특별히 신경써서 포장 드려야하는 물품이 있다면 '사진'과 함께 이곳에 작성해 주시기 바랍니다.">${escapeHtml(customNote)}</textarea>
-      <div class="custom-note-hint">견적 금액에는 포함되지 않으며, 포장 시 참고용으로 담당자에게 전달됩니다.</div>
+      <div class="custom-note-wrap">
+        <textarea id="custom-note" class="custom-note" placeholder="특별히 신경써서 포장 드려야하는 물품이 있다면 '사진'과 함께 이곳에 작성해 주시기 바랍니다.">${escapeHtml(customNote)}</textarea>
+        <div class="custom-note-hint">견적 금액에는 포함되지 않으며, 포장 시 참고용으로 담당자에게 전달됩니다.</div>
+      </div>
     </div>
   `;
 
@@ -2018,6 +2156,9 @@ function renderItemList(){
         const assemblyTag = (it.needsAssembly && lastEntry?.assembly)
           ? `<div class="assembly-tag ${lastEntry.assembly==='X'?'x':''}">${lastEntry.assembly}</div>`
           : '';
+        const variantTag = lastEntry?.variantKey
+          ? `<div class="variant-tag">${variantLabelOf(it, lastEntry.variantKey)}</div>`
+          : '';
         return `
           <div class="item-card" data-cat="${it.id}">
             ${count>0?`<button class="photo-delete" data-role="delete" title="마지막 촬영 사진 삭제">×</button>`:''}
@@ -2025,6 +2166,7 @@ function renderItemList(){
             <div class="icon" data-role="thumb">${iconInner}</div>
             <div class="lbl">${it.label}</div>
             ${assemblyTag}
+            ${variantTag}
           </div>
         `;
       }
@@ -2045,7 +2187,13 @@ function renderItemList(){
         }
         card.addEventListener('click', ()=>{
           activeCatId = cat.id;
-          openCamera();
+          const opts = variantOptions(cat);
+          if(opts){
+            askVariant(cat, opts);   // 구성 선택 후에 촬영 시작
+          }else{
+            activeVariantKey = null;
+            openCamera();
+          }
         });
       }
     });
@@ -2201,17 +2349,22 @@ async function handleCapturedPhoto(file){
   try{
     const dataUrl = await resizeImage(file, 700, 0.6);
     const cloudUrl = await uploadToCloudinary(dataUrl);
-    const {tier, matches, quotaIssue} = await analyzePhoto(cat, dataUrl);
+    const {tier, matches, quotaIssue} = await analyzePhoto(cat, dataUrl, activeVariantKey);
     if(quotaIssue){
       showToast('<a href="sms:3196600001" style="color:#7a5a00;text-decoration:none;display:block;">현재 이용자가 많아 AI 사진 확인이 어려우니, 문자 주시기 바랍니다.<br><b style="text-decoration:underline;">TEXT : 319-660-0001</b></a>');
     }
-    entry = {catId:cat.id, label:cat.label, cbm:cat.cbm, photo:dataUrl, cloudUrl, sizeTier:tier, mismatchFlag:!matches};
+    const vKey = activeVariantKey;
+    const vCbm = vKey ? variantCbm(cat.label, vKey) : null;
+    entry = {catId:cat.id, label:cat.label, cbm:(vCbm ?? cat.cbm), variantKey:vKey, photo:dataUrl, cloudUrl, sizeTier:tier, mismatchFlag:!matches};
   }catch(err){
     console.error(err);
-    entry = {catId:cat.id, label:cat.label, cbm:cat.cbm, photo:null, cloudUrl:null, sizeTier:0, mismatchFlag:false};
+    const vKeyF = activeVariantKey;
+    const vCbmF = vKeyF ? variantCbm(cat.label, vKeyF) : null;
+    entry = {catId:cat.id, label:cat.label, cbm:(vCbmF ?? cat.cbm), variantKey:vKeyF, photo:null, cloudUrl:null, sizeTier:0, mismatchFlag:false};
   }
   state.items.push(entry);
   activeCatId = null;
+  activeVariantKey = null;
   renderTabs();
   renderItemList();
   updateBar2();
@@ -2238,6 +2391,7 @@ function askMismatch(cat, entry){
     modal.classList.add('hidden');
   };
   const onRetake = ()=>{
+    const keepVariant = entry.variantKey || null;
     const idx = state.items.indexOf(entry);
     if(idx>-1) state.items.splice(idx,1);
     cleanup();
@@ -2245,6 +2399,7 @@ function askMismatch(cat, entry){
     renderItemList();
     updateBar2();
     activeCatId = cat.id;
+    activeVariantKey = keepVariant;   // 같은 구성으로 다시 촬영
     openCamera();
   };
   const onKeep = ()=>{
@@ -2259,6 +2414,31 @@ function askMismatch(cat, entry){
   const btnKeep = document.getElementById('mismatch-btn-keep');
   btnRetake.addEventListener('click', onRetake);
   btnKeep.addEventListener('click', onKeep);
+}
+
+function askVariant(cat, opts){
+  const modal = document.getElementById('variant-modal');
+  const box = document.getElementById('variant-btns');
+  document.getElementById('variant-modal-title').textContent = cat.label + ' — 구성 선택';
+  box.innerHTML = opts.map(o=>
+    `<button class="variant-btn" data-key="${o.key}"><span class="vk">${o.label}</span><span class="vd">${o.desc}</span></button>`
+  ).join('');
+  modal.classList.remove('hidden');
+
+  const close = ()=>{
+    modal.classList.add('hidden');
+    document.getElementById('variant-cancel').removeEventListener('click', onCancel);
+  };
+  const onCancel = ()=>{ activeCatId = null; activeVariantKey = null; close(); };
+  document.getElementById('variant-cancel').addEventListener('click', onCancel);
+
+  box.querySelectorAll('.variant-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeVariantKey = btn.dataset.key;
+      close();
+      openCamera();
+    });
+  });
 }
 
 function askAssembly(entry){
@@ -2339,10 +2519,12 @@ function resizeImage(file, maxDim, quality){
 
 // AI가 사진 속 물건이 기준 크기보다 큰지/작은지 판단 — 실제 Gemini 호출은
 // 서버 함수(/api/analyze-photo)가 담당하므로 이 파일에는 키가 없습니다.
-async function analyzePhoto(cat, dataUrl){
+async function analyzePhoto(cat, dataUrl, variantKey){
   try{
     const base64 = dataUrl.split(',')[1];
-    const dim = DIM_DATA[norm(cat.label)];
+    // 구성이 선택된 항목은 그 구성의 대표 부품 크기를 기준으로 판정한다
+    const vParts = variantKey ? variantParts(cat.label, variantKey) : null;
+    const dim = vParts ? vParts[0] : DIM_DATA[norm(cat.label)];
     const dimText = dim ? `이 항목의 일반적인 기준 크기는 가로 ${dim.w}인치 x 세로 ${dim.d}인치 x 높이 ${dim.h}인치입니다.` : '';
     const response = await fetch('/api/analyze-photo', {
       method: 'POST',
@@ -2350,7 +2532,7 @@ async function analyzePhoto(cat, dataUrl){
       body: JSON.stringify({
         base64,
         mimeType: 'image/jpeg',
-        catLabel: cat.label,
+        catLabel: (vParts ? vParts[0].name : cat.label),
         dimText
       })
     });
@@ -2389,7 +2571,7 @@ function renderReview(){
     <div class="item-row">
       ${iconInner}
       <div class="info">
-        <div class="n">${escapeHtml(it.label)}</div>
+        <div class="n">${escapeHtml(it.label)}${it.variantKey ? ` · ${variantLabelOf(cat, it.variantKey)}` : ''}</div>
         <div class="m">${subLine}</div>
       </div>
       ${rightCol}
@@ -2625,26 +2807,41 @@ async function shrinkForEmail(dataUrl, maxDim, quality){
 
 // ================= 견적서(PDF) 생성 =================
 // 페이지1: 사진 촬영한 물품만 기준 / 페이지2: 사진 촬영 물품 + 수량체크(생활잔짐) 박스를 합친 기준
+// 같은 품목이라도 구성(Both/Table/Chair 등)이 다르면 별도 행으로 잡아야 한다
+function groupKeyOf(it){ return it.catId + '|' + (it.variantKey || ''); }
+
+// 한 그룹(같은 품목 + 같은 구성)을 견적서 행 목록으로 변환.
+// 구성이 지정된 항목은 VARIANT_DATA 의 부품별로 행이 나뉘고, 아니면 기존 DIM_DATA 한 줄.
+function rowPartsFor(cat, entries){
+  const vKey = entries[0].variantKey;
+  const parts = vKey ? variantParts(cat.label, vKey) : null;
+  if(parts) return parts;
+  const dim = DIM_DATA[norm(cat.label)];
+  return [{name:cat.label, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:dim?dim.realcbm:0, load:dim?dim.loadcbm:0}];
+}
+
 function buildPhotoRowsForPdf(){
   const photoEntries = state.items.filter(it => findCat(it.catId)?.mode !== 'qty');
   const groups = {};
   photoEntries.forEach(it=>{
-    if(!groups[it.catId]) groups[it.catId] = [];
-    groups[it.catId].push(it);
+    const k = groupKeyOf(it);
+    if(!groups[k]) groups[k] = [];
+    groups[k].push(it);
   });
   let totalLoad = 0;
-  const rows = Object.values(groups).map(entries=>{
+  const rows = [];
+  Object.values(groups).forEach(entries=>{
     const cat = findCat(entries[0].catId);
     const count = entries.length;
-    const dim = DIM_DATA[norm(cat.label)];
     const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
-    const realPerUnit = dim ? dim.realcbm : 0;
-    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영 (기존엔 이 값이 빠져있던 버그를 수정함)
-    const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
-    const loadTotal = loadSum*discount;
-    totalLoad += loadTotal;
-    // PDF는 고객용이라 "(AI크기판정 ...)" 문구는 표시하지 않음 (계산에는 계속 반영됨)
-    return {label:cat.label, w:dim?dim.w:'-', d:dim?dim.d:'-', h:dim?dim.h:'-', real:realPerUnit, count, load:loadTotal};
+    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영
+    const tierFactorSum = entries.reduce((sum,e)=> sum + (1 + tierPct(e.sizeTier)/100), 0);
+    rowPartsFor(cat, entries).forEach(p=>{
+      const loadTotal = p.load * tierFactorSum * discount;
+      totalLoad += loadTotal;
+      // PDF는 고객용이라 "(AI크기판정 ...)" 문구는 표시하지 않음 (계산에는 계속 반영됨)
+      rows.push({label:p.name, w:p.w, d:p.d, h:p.h, real:p.real, count, load:loadTotal});
+    });
   });
   return {rows, totalLoad};
 }
@@ -2814,7 +3011,8 @@ async function submitQuote(id){
     const cat = findCat(it.catId);
     if(cat?.mode==='qty') return `- ${it.label}: 수량 ${it.qty}개`;
     const r = cbmRange(effectiveCbm(it, cat));
-    return `- ${it.label}: 약 ${r.low} ~ ${r.high} cbm${it.note ? ' ('+it.note+')' : ''}`;
+    const vTxt = it.variantKey ? ` [${variantLabelOf(cat, it.variantKey)}]` : '';
+    return `- ${it.label}${vTxt}: 약 ${r.low} ~ ${r.high} cbm${it.note ? ' ('+it.note+')' : ''}`;
   };
   const record = {
     id, submittedAt: now.toISOString(),
@@ -2823,7 +3021,7 @@ async function submitQuote(id){
       const cat = findCat(it.catId);
       return cat?.mode==='qty'
         ? {label:it.label, qty:it.qty}
-        : {label:it.label, cbmRange:cbmRange(effectiveCbm(it, cat)), note:it.note, photo:it.photo};
+        : {label:it.label, variant:it.variantKey || null, cbmRange:cbmRange(effectiveCbm(it, cat)), note:it.note, photo:it.photo};
     })
   };
   try{
@@ -2838,8 +3036,9 @@ async function submitQuote(id){
   const photoEntries = state.items.filter(it => findCat(it.catId)?.mode !== 'qty');
   const groups = {};
   photoEntries.forEach(it=>{
-    if(!groups[it.catId]) groups[it.catId] = [];
-    groups[it.catId].push(it);
+    const k = groupKeyOf(it);
+    if(!groups[k]) groups[k] = [];
+    groups[k].push(it);
   });
   const customPhotoEntries = customSlots
     .filter(s=>s && s.photo)
@@ -2849,34 +3048,33 @@ async function submitQuote(id){
     ? customPhotoEntries.map((e,i)=> e.cloudUrl ? `<a href="${e.cloudUrl}" target="_blank">사진${i+1}보기</a>` : `사진${i+1}(업로드 실패)`).join(' &nbsp;·&nbsp; ')
     : '(촬영된 사진 없음)';
 
-  const photoRows = Object.values(groups).map((entries)=>{
+  const photoRows = Object.values(groups).flatMap((entries)=>{
     const cat = findCat(entries[0].catId);
     const count = entries.length;
-    const dim = DIM_DATA[norm(cat.label)];
     const photoTag = entries.some(e=>e.cloudUrl || e.photo) ? '📷' : '-';
-    const w = dim ? dim.w : '-';
-    const d = dim ? dim.d : '-';
-    const h = dim ? dim.h : '-';
     const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
-    const realTotal = dim ? (dim.realcbm*count*discount).toFixed(3) : '-';
-    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영 (기존엔 이 값이 빠져있던 버그를 수정함)
-    const loadSum = dim ? entries.reduce((sum,e)=> sum + dim.loadcbm*(1+tierPct(e.sizeTier)/100), 0) : 0;
-    const loadTotal = dim ? (loadSum*discount).toFixed(3) : '-';
+    const tierFactorSum = entries.reduce((sum,e)=> sum + (1 + tierPct(e.sizeTier)/100), 0);
     const assemblyTxt = entries.some(e=>e.assembly) ? entries.map(e=>e.assembly?`(${e.assembly})`:'').join(' ') : '';
     const mismatchTxt = entries.some(e=>e.mismatchFlag) ? ' ⚠️사진확인필요' : '';
     const tierVals = entries.map(e=>tierPct(e.sizeTier));
     const tierTxt = ` 🔍AI크기판정:${tierVals.map(p=>(p>0?'+':'')+p+'%').join(', ')}`;
-    const noteTxt = assemblyTxt + mismatchTxt + tierTxt;
-    return `<tr>
+    const vTxt = entries[0].variantKey ? ` [${variantLabelOf(cat, entries[0].variantKey)}]` : '';
+    const noteTxt = vTxt + ' ' + assemblyTxt + mismatchTxt + tierTxt;
+    // 구성(Both 등)이 지정된 항목은 부품별로 행이 나뉘어 출력된다
+    return rowPartsFor(cat, entries).map(p=>{
+      const realTotal = (p.real*count*discount).toFixed(3);
+      const loadTotal = (p.load*tierFactorSum*discount).toFixed(3);
+      return `<tr>
       <td style="padding:6px 8px;font-size:13px;text-align:center;">${photoTag}</td>
-      <td style="padding:6px 8px;font-size:13px;">${escapeHtml(cat.label)} ${noteTxt}</td>
-      <td style="padding:6px 8px;font-size:13px;text-align:center;">${w}</td>
-      <td style="padding:6px 8px;font-size:13px;text-align:center;">${d}</td>
-      <td style="padding:6px 8px;font-size:13px;text-align:center;">${h}</td>
+      <td style="padding:6px 8px;font-size:13px;">${escapeHtml(p.name)}${noteTxt}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${p.w}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${p.d}</td>
+      <td style="padding:6px 8px;font-size:13px;text-align:center;">${p.h}</td>
       <td style="padding:6px 8px;font-size:13px;text-align:center;">${realTotal}</td>
       <td style="padding:6px 8px;font-size:13px;text-align:center;">${count}</td>
       <td style="padding:6px 8px;font-size:13px;text-align:center;font-weight:bold;">${loadTotal}</td>
     </tr>`;
+    });
   });
   const itemsHtml = `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;">
     <tr style="background:#f1ede4;">
