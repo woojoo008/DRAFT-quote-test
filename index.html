@@ -765,6 +765,17 @@
     </div>
   </div>
 
+  <div class="modal-overlay hidden" id="exit-modal">
+    <div class="modal-card">
+      <div class="modal-title">앱을 나가시겠어요?</div>
+      <div class="modal-sub" id="exit-modal-sub">지금까지 입력하신 내용과 촬영하신 사진이 모두 사라지고 복구할 수 없어요.</div>
+      <div class="modal-btns">
+        <button class="modal-btn o" id="exit-stay">계속 작성하기</button>
+        <button class="modal-btn x" id="exit-leave">나가기</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="assembly-modal">
     <div class="modal-card">
       <div class="modal-title" id="assembly-modal-title">분해 가능 여부</div>
@@ -956,9 +967,7 @@ if(EMAILJS_PUBLIC_KEY && window.emailjs){
 
 const SECTIONS = [
   {id:'living', name:'거실', items:[
-    {label:'장식장(소)', cbm:0.669, icon:'wardrobe', size:'sm'},
-    {label:'장식장(중)', cbm:0.874, icon:'wardrobe', size:'md'},
-    {label:'장식장(대)', cbm:1.657, icon:'wardrobe', size:'lg'},
+    {label:'장식장', cbm:0.874, icon:'wardrobe', size:'md', variantSet:'cabinet'},
     {label:'서랍장(3단)', cbm:0.907, icon:'drawer-chest', size:'sm'},
     {label:'서랍장(5단)', cbm:1.236, icon:'drawer-chest', size:'md'},
     {label:'소파(1인:arm chair)', cbm:1.404, icon:'armchair', size:'sm'},
@@ -1267,6 +1276,11 @@ const VARIANT_SETS = {
     {key:'medium', label:'중', desc:'높이 42inch 이상'},
     {key:'small',  label:'소', desc:'그 이하'},
   ],
+  cabinet: [
+    {key:'large',  label:'대', desc:'높이 65inch 이상'},
+    {key:'medium', label:'중', desc:'높이 47inch 이상'},
+    {key:'small',  label:'소', desc:'높이 30inch 이상'},
+  ],
 };
 
 const VARIANT_DATA = {
@@ -1322,6 +1336,12 @@ const VARIANT_DATA = {
     both:  [{name:'8인 식탁 세트 (식탁+의자 8개)', w:79, d:43, h:34, real:3.161, load:4.078}],
     table: [{name:'8인 식탁 테이블',    w:79, d:39, h:12, real:0.951, load:1.227}],
     chair: [{name:'8인 식탁 의자 (8개)', w:18, d:20, h:33, real:0.306, load:3.155}],
+  },
+  // 장식장 — 대/중/소 모두 엑셀 실측값
+  '장식장': {
+    large:  [{name:'장식장 (대)', w:47, d:18, h:59, real:1.284, load:1.657}],
+    medium: [{name:'장식장 (중)', w:35, d:16, h:47, real:0.677, load:0.874}],
+    small:  [{name:'장식장 (소)', w:30, d:16, h:42, real:0.519, load:0.669}],
   },
   '책장': {
     large:  [{name:'책장 (대)', w:35, d:16, h:71, real:1.023, load:1.320}],
@@ -2269,20 +2289,103 @@ async function openCustomCamera(){
 
 // 모달만 닫고 카메라 스트림은 켜진 채로 둠 (다음 사진 촬영 시 재사용)
 // fromPopState가 true면 뒤로가기 때문에 호출된 것이므로 history.back()을 또 부르지 않음
+let suppressNextPop = false;   // 앱이 스스로 history.back()을 부른 경우, 뒤로가기 가드가 반응하지 않도록
 function hideCameraUI(fromPopState){
   document.getElementById('camera-modal').classList.add('hidden');
   if(cameraHistoryPushed){
     cameraHistoryPushed = false;
-    if(!fromPopState) history.back(); // 열 때 쌓아둔 히스토리를 정리
+    if(!fromPopState){
+      suppressNextPop = true;
+      history.back(); // 열 때 쌓아둔 히스토리를 정리
+    }
   }
 }
 
+/* ==========================================================================
+   뒤로가기 가드
+   기기/브라우저의 뒤로가기를 누르면 앱이 그대로 종료되면서 입력 내용이 전부
+   사라지던 문제를 막는다. 동작 순서:
+     카메라/모달이 열려 있으면 → 그것만 닫기
+     2~4단계  → 이전 단계로 이동 (앱 종료 아님)
+     1단계    → 입력한 내용이 있으면 "정말 나가시겠어요?" 확인 후에만 종료
+     전송 중  → 종료 차단 (메일 발송이 끊기므로)
+   원리: 히스토리에 더미 항목을 하나 얹어두고, 뒤로가기로 그게 소비될 때마다
+        다시 얹어서 실제로는 앱 밖으로 나가지 않게 한다.
+   ========================================================================== */
+let backGuardOn = false;
+function armBackGuard(){
+  try{
+    history.replaceState({hd:'base'}, '');
+    history.pushState({hd:'guard'}, '');
+    backGuardOn = true;
+  }catch(e){ backGuardOn = false; }
+}
+armBackGuard();
+
+function anyOpenModal(){
+  return ['variant-modal','assembly-modal','mismatch-modal','exit-modal']
+    .map(id=>document.getElementById(id))
+    .find(el=>el && !el.classList.contains('hidden'));
+}
+
+function hasEnteredData(){
+  if(state.items.length) return true;
+  if(customSlots.some(x=>x)) return true;
+  if((customNote||'').trim()) return true;
+  return Object.values(state.customer).some(v=>(v||'').trim());
+}
+
+function leaveApp(){
+  backGuardOn = false;
+  // 얹어둔 더미 항목(guard + base)을 걷어내고 실제로 앱을 빠져나간다
+  try{ history.go(-2); }catch(e){ history.back(); }
+}
+
+function confirmExit(){
+  const modal = document.getElementById('exit-modal');
+  document.getElementById('exit-modal-sub').textContent = (currentStep === 4)
+    ? '접수는 이미 완료됐어요. 이 화면을 닫을까요?'
+    : '지금까지 입력하신 내용과 촬영하신 사진이 모두 사라지고 복구할 수 없어요.';
+  modal.classList.remove('hidden');
+  const stay = document.getElementById('exit-stay');
+  const leave = document.getElementById('exit-leave');
+  const close = ()=>{
+    modal.classList.add('hidden');
+    stay.removeEventListener('click', onStay);
+    leave.removeEventListener('click', onLeave);
+  };
+  const onStay = ()=> close();
+  const onLeave = ()=>{ close(); leaveApp(); };
+  stay.addEventListener('click', onStay);
+  leave.addEventListener('click', onLeave);
+}
+
+function handleBackNavigation(){
+  if(submitInFlight){
+    showToast('전송이 진행 중이에요. 잠시만 기다려 주세요.');
+    return;
+  }
+  const open = anyOpenModal();
+  if(open){ open.classList.add('hidden'); return; }
+  if(currentStep === 4){ confirmExit(); return; }
+  if(currentStep > 1){ goStep(currentStep - 1); return; }
+  if(hasEnteredData()){ confirmExit(); return; }
+  leaveApp();
+}
+
 window.addEventListener('popstate', ()=>{
+  if(suppressNextPop){ suppressNextPop = false; return; }   // 앱이 직접 정리한 히스토리 — 무시
+  // 카메라가 열려 있으면 카메라가 직접 쌓아둔 히스토리가 소비된 것 — 카메라만 닫는다
   if(!document.getElementById('camera-modal').classList.contains('hidden')){
     hideCameraUI(true);
     activeCatId = null;
+    activeVariantKey = null;
     activeCustomSlotIndex = null;
+    return;
   }
+  if(!backGuardOn) return;          // 사용자가 종료를 확정한 경우 — 그대로 내보낸다
+  armBackGuard();                   // 더미 항목을 다시 얹어 앱 밖으로 나가지 않게 함
+  handleBackNavigation();
 });
 
 // 스트림 자체를 완전히 종료 (물품촬영 단계를 벗어날 때만 호출)
