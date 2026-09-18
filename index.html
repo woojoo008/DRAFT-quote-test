@@ -485,6 +485,15 @@
   .dest-sub{display:none;margin-top:8px;}
   .dest-sub.show{display:block;}
 
+  /* 사진 업로드·AI 판정이 끝날 때까지 품목 카드 자리에 도는 표시 */
+  .proc-spin{width:30px;height:30px;animation:proc-turn 6s linear infinite;}
+  .proc-spin line{
+    stroke:var(--orange);stroke-width:2.7;stroke-linecap:round;
+    stroke-dasharray:7;animation:proc-burst 1.35s ease-in-out infinite;
+  }
+  @keyframes proc-burst{0%,100%{stroke-dashoffset:6.5;}45%,55%{stroke-dashoffset:0;}}
+  @keyframes proc-turn{to{transform:rotate(360deg);}}
+
   /* 서비스 지역 밖 안내 팝업 */
   .zn-title{font-size:14.5px;font-weight:800;color:var(--navy);line-height:1.6;margin-bottom:16px;text-align:center;}
   .zn-link{
@@ -2516,12 +2525,19 @@ function showToast(html, durationMs=8000){
   toastTimer = setTimeout(()=> el.classList.remove('show'), durationMs);
 }
 
+// 사진 업로드·AI 판정이 끝날 때까지 카드 자리에 도는 표시.
+// 기기마다 모양이 다른 ⏳ 이모지 대신 앱 색상의 별 애니메이션을 쓴다.
+const PROC_SPINNER = '<svg class="proc-spin" viewBox="0 0 32 32"><g transform="rotate(0 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(36 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(72 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(108 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(144 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(180 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(216 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(252 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(288 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g><g transform="rotate(324 16 16)"><line x1="16" y1="4" x2="16" y2="11"/></g></svg>';
+
 async function handleCapturedPhoto(file){
   if(!file) return;
 
   if(activeCustomSlotIndex !== null){
     const slotIndex = activeCustomSlotIndex;
     activeCustomSlotIndex = null;
+    // 업로드가 끝날 때까지 해당 슬롯에 처리 중 표시를 띄운다
+    const slotIcon = document.querySelector(`.item-card[data-slot="${slotIndex}"] .icon`);
+    if(slotIcon) slotIcon.innerHTML = PROC_SPINNER;
     try{
       const dataUrl = await resizeImage(file, 700, 0.6);
       const cloudUrl = await uploadToCloudinary(dataUrl);
@@ -2538,7 +2554,7 @@ async function handleCapturedPhoto(file){
   const cat = findCat(activeCatId);
   const row = document.querySelector(`.item-card[data-cat="${activeCatId}"]`);
   const thumbEl = row?.querySelector('[data-role="thumb"]');
-  if(thumbEl) thumbEl.textContent = '⏳';
+  if(thumbEl) thumbEl.innerHTML = PROC_SPINNER;
 
   let entry;
   try{
