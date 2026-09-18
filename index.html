@@ -459,14 +459,35 @@
 
   /* ===== 견적서(PDF) 렌더링용 — 화면에는 보이지 않고 PDF 생성 시 잠깐 그려졌다가 캡처됨 ===== */
   #pdf-render-area{position:fixed;left:0;top:0;width:820px;background:#fff;z-index:-1;overflow:hidden;pointer-events:none;}
-  .pdf-page-frame{width:820px;min-height:1160px;background:#fff;box-sizing:border-box;}
-  .pdf-page{width:820px;padding:50px 50px;background:#fff;font-family:'Courier New',monospace;color:#000;box-sizing:border-box;}
-  .pdf-logo{color:#c8471f;font-size:26px;font-weight:bold;letter-spacing:1px;}
-  .pdf-company{font-size:15px;font-weight:bold;margin-top:2px;}
-  .pdf-addr{font-size:11px;color:#333;margin-top:2px;}
-  .pdf-hr{border-top:2px solid #000;margin:14px 0 26px;}
-  .pdf-title{text-align:center;font-weight:bold;font-size:14px;margin-bottom:6px;}
-  .pdf-meta{text-align:center;font-size:11px;color:#444;margin-bottom:22px;}
+  /* ===== 견적서(PDF) 레이아웃 =====
+     820 x 1160px = A4 비율. 내용이 짧아도 페이지 높이를 유지하고
+     주소/전화 푸터는 항상 페이지 맨 아래에 붙도록 flex로 밀어 내린다. */
+  /* 서비스 지역 밖 안내 */
+  .zone-notice{
+    display:none;background:#fdf3ec;border:1.5px solid #f2d8c6;border-radius:12px;
+    padding:14px 16px;margin-bottom:16px;
+  }
+  .zone-notice.show{display:block;}
+  .zn-title{font-size:14.5px;font-weight:800;color:var(--orange-dark);line-height:1.55;margin-bottom:12px;}
+  .zn-body{font-size:12.5px;color:var(--navy-2);line-height:1.6;margin-bottom:10px;}
+  .zn-link{
+    display:block;background:#fff;border:1px solid var(--line);border-radius:9px;
+    padding:10px 12px;margin-top:7px;font-size:13px;font-weight:700;color:var(--navy);
+    text-decoration:none;
+  }
+  .zn-kakao{font-weight:700;}
+
+  .pdf-page-frame{width:820px;min-height:1160px;background:#fff;box-sizing:border-box;display:flex;}
+  .pdf-page{
+    width:820px;padding:44px 50px 30px;background:#fff;
+    font-family:'Courier New',monospace;color:#000;box-sizing:border-box;
+    display:flex;flex-direction:column;flex:1;
+  }
+  .pdf-logo-img{display:block;margin:0 auto;width:360px;height:auto;}
+  .pdf-hr{border-top:2px solid #000;margin:16px 0 0;}
+  /* 헤더 아래 두 줄 정도의 여백 — 표가 페이지 가운데로 내려오며 균형이 잡힌다 */
+  .pdf-title{text-align:center;font-weight:bold;font-size:15px;margin-top:78px;}
+  .pdf-meta{text-align:right;font-size:11.5px;color:#222;margin-top:26px;margin-bottom:10px;line-height:1.7;}
   .pdf-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11.5px;}
   .pdf-table col.c-item{width:33%;}
   .pdf-table col.c-dim{width:9%;}
@@ -477,28 +498,26 @@
   .pdf-table td.td-left{text-align:left;padding-left:8px;}
   .pdf-table td.bold{font-weight:bold;}
   .pdf-note{font-size:10.5px;color:#333;text-align:right;margin-top:8px;}
-  .pdf-totalbox{margin:24px auto 0;width:52%;border:1px solid #999;}
-  .tt-row1{display:flex;border-bottom:1px solid #999;}
-  .tt-row1-label{flex:1;text-align:center;padding:7px;font-size:12px;font-weight:bold;border-right:1px solid #999;}
-  .tt-row1-value{flex:1;text-align:center;padding:7px;font-size:12px;}
-  .tt-row2{display:flex;border-bottom:1px solid #999;}
-  .tt-row2-label{width:26%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;border-right:1px solid #999;text-align:center;padding:7px;}
-  .tt-row2-mid{width:40%;display:flex;flex-direction:column;border-right:1px solid #999;}
-  .tt-cell{flex:1;display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #ddd;font-size:12px;}
-  .tt-cell:last-child{border-bottom:none;}
-  .tt-cell-sub{color:#555;}
-  .tt-cell-amt{font-weight:bold;}
-  .tt-row2-total{width:34%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;}
-  .tt-clearance{text-align:center;padding:8px;}
-  .pdf-footer{margin-top:26px;font-size:10px;color:#555;text-align:left;}
+
+  /* 합계 박스 — 오른쪽 정렬. Custom clearance 문구는 기본3큐빅/추가큐빅 칸 아래에만 들어간다 */
+  .pdf-totalbox{
+    margin:26px 0 0 auto;width:56%;border-collapse:collapse;table-layout:fixed;
+  }
+  .pdf-totalbox td{border:1px solid #999;padding:6px 8px;font-size:12px;text-align:center;}
+  .pdf-totalbox td.tt-label{font-weight:bold;font-size:12.5px;width:30%;}
+  .pdf-totalbox td.tt-vol{font-size:12px;}
+  .pdf-totalbox td.tt-amt{font-size:12px;width:20%;}
+  .pdf-totalbox td.tt-sub{font-size:10px;color:#555;padding:4px 6px;}
+  .pdf-totalbox td.tt-total{font-size:17px;font-weight:bold;width:30%;}
+  /* 안내 문구(.pdf-note)와 같은 글꼴·크기로 맞춘다 */
+  .pdf-totalbox td.tt-clear{font-size:10.5px;font-weight:normal;color:#333;padding:5px 6px;}
+
+  /* margin-top:auto 로 푸터를 페이지 맨 아래로 밀어 붙인다 */
+  .pdf-footer{margin-top:auto;padding-top:30px;font-size:10px;color:#555;text-align:center;}
+  .pdf-gulim-body{display:flex;flex-direction:column;flex:1;}
+  /* 견적서 본문은 굴림 계열로 통일 — 단, 크기/굵기는 위에서 정한 값을 살린다 */
   .pdf-gulim-body, .pdf-gulim-body *{
     font-family:'Noto Sans KR','Gulim','GulimChe',sans-serif !important;
-    font-size:11px !important;
-    font-weight:normal !important;
-  }
-  .pdf-gulim-body .pdf-clearance{
-    font-size:8px !important;
-    font-weight:bold !important;
   }
 </style>
 </head>
@@ -537,6 +556,14 @@
     <div class="eyebrow">Step 1</div>
     <h1>기본 정보를 입력해 주세요</h1>
     <div class="banner" id="s1-banner">입력하신 정보를 다시 확인해 주세요. 잘못되었거나 비어있는 항목이 있습니다.</div>
+
+    <!-- 서비스 지역 밖일 때 1단계에서 바로 안내한다 (사진을 다 찍은 뒤 알게 되는 일이 없도록) -->
+    <div class="zone-notice" id="s1-zone-notice">
+      <div class="zn-title">해당 지역은 담당자 상담이 필요 하오니, 연락 부탁 드립니다.</div>
+      <a class="zn-link" href="tel:3196600001">전화 · 문자 &nbsp;319-660-0001</a>
+      <a class="zn-link" href="mailto:ricky@cyhds.com">이메일 &nbsp;ricky@cyhds.com</a>
+      <div class="zn-link zn-kakao">카카오톡 ID &nbsp;HDSUSA</div>
+    </div>
 
     <div class="field" id="f-packing-date">
       <label>희망 포장일</label>
@@ -1772,28 +1799,42 @@ document.getElementById('btn-1-next').addEventListener('click', async ()=>{
   const originalLabel = btn.textContent;
   btn.textContent = 'ZIP 코드 확인 중...';
   btn.disabled = true;
-  const zipReal = await verifyZipExists(state.customer.zip);
+  const check = await checkZip(state.customer.zip);
   btn.textContent = originalLabel;
   btn.disabled = false;
 
-  if(zipReal === false){
+  const zoneEl = document.getElementById('s1-zone-notice');
+
+  if(check.valid === false){
+    zoneEl.classList.remove('show');
     document.getElementById('f-zip').classList.add('error');
     document.getElementById('f-zip').querySelector('.err-msg').textContent = '실제 존재하는 ZIP 코드가 아니에요. 다시 확인해 주세요.';
     document.getElementById('s1-banner').classList.add('show');
     return;
   }
 
+  // 서비스 지역 밖이면 여기서 멈추고 담당자 연락처를 보여준다
+  if(check.serviceable === false){
+    document.getElementById('s1-banner').classList.remove('show');
+    document.getElementById('f-zip').classList.remove('error');
+    zoneEl.classList.add('show');
+    zoneEl.scrollIntoView({block:'center', behavior:'smooth'});
+    return;
+  }
+
+  zoneEl.classList.remove('show');
   document.getElementById('s1-banner').classList.remove('show');
   goStep(2);
 });
 
-async function verifyZipExists(zip){
+// ZIP 실재 여부 + 서비스 지역 여부를 서버가 한 번에 판정한다.
+// 서버에 못 닿으면 막지 않고 통과시킨다 (네트워크 문제로 접수 자체가 끊기는 편이 더 나쁨).
+async function checkZip(zip){
   try{
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    return res.ok; // 404 등이면 false -> 실제 없는 zip
+    return await apiPost('/api/check-zip', {zip});
   }catch(err){
-    console.error('zip verify failed (network) — allowing through', err);
-    return true; // 네트워크 오류 시엔 정상 진행 막지 않음
+    console.error('zip check failed (network) — allowing through', err);
+    return {valid: true, serviceable: true};
   }
 }
 
@@ -2820,6 +2861,9 @@ function buildBoxRowsForPdf(){
   return {rows, totalLoad};
 }
 
+// 견적서 상단 레터헤드 — 이미지로 넣어야 원본 로고와 동일하게 나온다
+const PDF_LOGO_SRC = 'data:image/png;base64,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';
+
 function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
   const rowsHtml = rowsData.rows.map(r=>`
     <tr>
@@ -2830,55 +2874,66 @@ function pdfPageHtml(rowsData, priced, quoteId, dateStr, contactNeeded){
       <td class="bold">${(+r.load).toFixed(9)}</td>
     </tr>`).join('');
 
+  // 합계 박스: 1행 총 부피 / 2~4행은 왼쪽 라벨과 오른쪽 총액이 세로로 합쳐지고,
+  // 가운데 칸에만 금액·구분·Custom clearance 문구가 층층이 들어간다.
   const totalBoxHtml = contactNeeded ? `
-    <div class="pdf-totalbox">
-      <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
-      <div style="padding:14px;text-align:center;">담당자 확인 후 정확한 비용을 안내드립니다.</div>
-    </div>` : `
-    <div class="pdf-totalbox">
-      <div class="tt-row1"><div class="tt-row1-label">총 부피</div><div class="tt-row1-value">${rowsData.totalLoad.toFixed(8)}</div></div>
-      <div class="tt-row2">
-        <div class="tt-row2-label">총 예상비용</div>
-        <div class="tt-row2-mid">
-          <div class="tt-cell"><span class="tt-cell-sub">기본 3 큐빅</span><span class="tt-cell-amt">$${priced.combinedBase.toLocaleString()}</span></div>
-          <div class="tt-cell"><span class="tt-cell-sub">추가큐빅</span><span class="tt-cell-amt">$${priced.extraRate}</span></div>
-        </div>
-        <div class="tt-row2-total">$${priced.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      </div>
-      <div class="tt-clearance pdf-clearance">Custom clearance is not included</div>
-    </div>`;
+    <table class="pdf-totalbox">
+      <tr><td class="tt-label">총 부피</td><td class="tt-vol" colspan="3">${rowsData.totalLoad.toFixed(8)}</td></tr>
+      <tr><td colspan="4" style="padding:12px;">담당자 확인 후 정확한 비용을 안내드립니다.</td></tr>
+    </table>` : `
+    <table class="pdf-totalbox">
+      <tr>
+        <td class="tt-label">총 부피</td>
+        <td class="tt-vol" colspan="3">${rowsData.totalLoad.toFixed(8)}</td>
+      </tr>
+      <tr>
+        <td class="tt-label" rowspan="3">총 예상비용</td>
+        <td class="tt-amt">$${priced.combinedBase.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        <td class="tt-amt">$${priced.extraRate}</td>
+        <td class="tt-total" rowspan="3">$${priced.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      </tr>
+      <tr>
+        <td class="tt-sub">기본 3 큐빅</td>
+        <td class="tt-sub">추가큐빅</td>
+      </tr>
+      <tr>
+        <td class="tt-clear" colspan="2">Custom clearance is not included</td>
+      </tr>
+    </table>`;
+
+  const custName = (state.customer.name || '').trim();
 
   return `
   <div class="pdf-page-frame"><div class="pdf-page">
-    <div class="pdf-logo">현대해운</div>
-    <div class="pdf-company">HYUNDAI SHIPPING USA INC.</div>
-    <div class="pdf-addr">18300 S. WILMINGTON AVE., UNIT 160, RANCHO DOMINGUEZ, CA 90220</div>
-    <div class="pdf-addr">TEL: (+1)-310-763-7770 / FAX: (+1)-310-763-7772 / www.cyhds.com</div>
+    <img class="pdf-logo-img" src="${PDF_LOGO_SRC}" alt="HYUNDAI SHIPPING USA INC.">
     <div class="pdf-hr"></div>
     <div class="pdf-gulim-body">
-    <div class="pdf-title">[THIS IS NOT THE FINAL INVOICE]</div>
-    <div class="pdf-meta">견적번호: ${escapeHtml(quoteId)} &nbsp;&nbsp;&nbsp; 작성일: ${dateStr}</div>
-    <table class="pdf-table">
-      <colgroup>
-        <col class="c-item"><col class="c-dim"><col class="c-dim"><col class="c-dim">
-        <col class="c-real"><col class="c-qty"><col class="c-load">
-      </colgroup>
-      <thead>
-        <tr>
-          <th rowspan="2">아이템</th>
-          <th colspan="3">전체 부피 (inch)</th>
-          <th rowspan="2">실 포장<br>CBM</th>
-          <th rowspan="2">수량</th>
-          <th rowspan="2">적재 CBM</th>
-        </tr>
-        <tr><th>가로</th><th>세로</th><th>높이</th></tr>
-      </thead>
-      <tbody>${rowsHtml || '<tr><td colspan="7" style="padding:14px;color:#888;">해당 항목 없음</td></tr>'}</tbody>
-    </table>
-    <div class="pdf-note">Volume estimates use AI analysis based on a large-scale furniture database from Crate &amp; Barrel, Pottery Barn, and RH.</div>
-    <div class="pdf-note">This estimate may vary by angle, lighting, distance, and composition; final cost is based on actual volume.</div>
-    ${totalBoxHtml}
-    <div class="pdf-footer">18300 S. WILMINGTON AVE. UNIT 160, RANCHO DOMINGUEZ, CA 90220 *TEL: 310-763-7770, FAX: 310-763-7772</div>
+      <div class="pdf-title">[THIS IS NOT THE FINAL INVOICE]</div>
+      <div class="pdf-meta">
+        견적번호: ${escapeHtml(quoteId)}<br>
+        작성일: ${dateStr}${custName ? `<br>성함: ${escapeHtml(custName)} 님` : ''}
+      </div>
+      <table class="pdf-table">
+        <colgroup>
+          <col class="c-item"><col class="c-dim"><col class="c-dim"><col class="c-dim">
+          <col class="c-real"><col class="c-qty"><col class="c-load">
+        </colgroup>
+        <thead>
+          <tr>
+            <th rowspan="2">아이템</th>
+            <th colspan="3">전체 부피 (inch)</th>
+            <th rowspan="2">실 포장<br>CBM</th>
+            <th rowspan="2">수량</th>
+            <th rowspan="2">적재 CBM</th>
+          </tr>
+          <tr><th>가로</th><th>세로</th><th>높이</th></tr>
+        </thead>
+        <tbody>${rowsHtml || '<tr><td colspan="7" style="padding:14px;color:#888;">해당 항목 없음</td></tr>'}</tbody>
+      </table>
+      <div class="pdf-note">Volume estimates use AI analysis based on a large-scale furniture database from Crate &amp; Barrel, Pottery Barn, and RH.</div>
+      <div class="pdf-note">This estimate may vary by angle, lighting, distance, and composition; final cost is based on actual volume.</div>
+      ${totalBoxHtml}
+      <div class="pdf-footer">18300 S. WILMINGTON AVE. UNIT 160, RANCHO DOMINGUEZ, CA 90220 &nbsp;*TEL: 310-763-7770, FAX: 310-763-7772</div>
     </div>
   </div></div>`;
 }
@@ -2899,6 +2954,11 @@ async function renderPdfPageToCanvas(html){
   }catch(err){
     console.error('web font load check failed, proceeding anyway', err);
   }
+  // 레터헤드 이미지가 디코딩되기 전에 캡처하면 로고가 빈칸으로 나온다
+  try{
+    const imgs = [...area.querySelectorAll('img')].filter(im=>!im.complete);
+    await Promise.all(imgs.map(im=> new Promise(r=>{ im.onload = im.onerror = r; })));
+  }catch(err){ console.error('logo image wait failed', err); }
   await new Promise(r=>setTimeout(r, 30)); // 레이아웃이 자리잡을 시간을 아주 잠깐 더 줌
   const canvas = await html2canvas(area.firstElementChild, {
     scale:2, backgroundColor:'#ffffff',
