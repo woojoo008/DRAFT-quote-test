@@ -243,6 +243,21 @@
     display:flex;gap:6px;align-items:flex-start;
   }
   .custom-note-hint::before{content:'※';color:var(--orange-dark);flex-shrink:0;}
+  /* 촬영한 사진마다 카드가 하나씩 — 몇 번째인지 표시 */
+  .item-card .ord{
+    position:absolute;top:6px;left:6px;min-width:18px;height:18px;border-radius:9px;
+    background:var(--navy);color:#fff;font-size:10px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;padding:0 5px;
+  }
+  /* "하나 더 있어요" 카드 — 의무가 아니라 선택으로 보이도록 점선 + 흐린 톤 */
+  .more-card{border-style:dashed;background:#fdfbf7;}
+  .more-card .lbl{color:var(--muted);}
+  .more-plus{
+    font-size:26px;font-weight:800;color:var(--orange-dark);line-height:1;
+    margin-bottom:6px;
+  }
+  .more-sub{font-size:10px;color:var(--orange-dark);font-weight:700;}
+
   .item-card{
     background:#fff;border-radius:16px;border:1px solid #edeae1;
     box-shadow:0 1px 2px rgba(20,20,20,.04);
@@ -996,33 +1011,30 @@ async function uploadGalleryPage(photoEntries, quoteId){
 }
 const SECTIONS = [
   {id:'living', name:'거실', items:[
-    {label:'장식장', cbm:0.874, icon:'wardrobe', size:'md', variantSet:'cabinet'},
-    {label:'서랍장(3단)', cbm:0.907, icon:'drawer-chest', size:'sm'},
-    {label:'서랍장(5단)', cbm:1.236, icon:'drawer-chest', size:'md'},
-    {label:'소파(1인:arm chair)', cbm:1.404, icon:'armchair', size:'sm'},
-    {label:'소파(2인:love seat)', cbm:2.367, icon:'sofa', size:'md'},
-    {label:'소파(3인)', cbm:3.157, icon:'sofa', size:'lg'},
-    {label:'소파테이블', cbm:0.414, icon:'console-table'},
-    {label:'스탠딩 에어컨', cbm:1.141, icon:'standing-ac'},
-    {label:'소파옆 협탁', cbm:0.391, icon:'side-table'},
+    {label:'TV', cbm:0.508, icon:'tv'},
+    {label:'TV 스탠드', cbm:0.708, icon:'tv-cabinet'},
     {label:'커피 테이블', cbm:0.874, icon:'coffee-table2'},
-    {label:'그랜드 피아노', cbm:5.27, icon:'piano', size:'xl'},
-    {label:'upright 피아노', cbm:3.048, icon:'piano', size:'md'},
-    {label:'전자피아노', cbm:0.764, icon:'piano', size:'sm'},
+    {label:'소파(3인)', cbm:3.157, icon:'sofa', size:'lg'},
+    {label:'소파(2인:love seat)', cbm:2.367, icon:'sofa', size:'md'},
+    {label:'소파(1인:arm chair)', cbm:1.404, icon:'armchair', size:'sm'},
+    {label:'소파옆 협탁', cbm:0.391, icon:'side-table'},
+    {label:'서랍장 3단 or 5단', cbm:0.907, icon:'drawer-chest', size:'sm', variantSet:'drawer'},
+    {label:'장식장', cbm:0.874, icon:'wardrobe', size:'md', variantSet:'cabinet'},
     {label:'마사지(안마)의자', cbm:2.015, icon:'massage-chair'},
-    {label:'런닝머신', cbm:1.529, icon:'treadmill'},
     {label:'흔들의자', cbm:1.269, icon:'rocking-chair'},
     {label:'콘솔', cbm:0.774, icon:'console'},
+    {label:'전자피아노', cbm:0.764, icon:'piano', size:'sm'},
+    {label:'GRAND or Upright 피아노', cbm:5.27, icon:'piano', size:'xl', variantSet:'piano'},
+    {label:'런닝머신', cbm:1.529, icon:'treadmill'},
+    {label:'스탠딩 에어컨', cbm:1.141, icon:'standing-ac'},
     {label:'액자(대):72inch', icon:'image'},
     {label:'액자(중):36inch', icon:'image'},
     {label:'액자(소):18inch', icon:'image'},
-    {label:'도자기', icon:'vase'},
     {label:'카페트/돗자리', icon:'rug'},
     {label:'장식품 (스탠딩)', icon:'figurine'},
+    {label:'도자기', icon:'vase'},
     {label:'조각', icon:'landmark'},
     {label:'작은 스피커', icon:'speaker'},
-    {label:'TV', cbm:0.508, icon:'tv'},
-    {label:'TV 캐비닛', cbm:0.708, icon:'tv-cabinet'},
   ]},
   {id:'bedroom', name:'침실', items:[
     {label:'CK침대', cbm:4.403, icon:'bed', size:'xl', variantSet:'bed'},
@@ -1048,43 +1060,37 @@ const SECTIONS = [
     {label:'가습기', icon:'humidifier'},
   ]},
   {id:'study', name:'공부방', items:[
-    {label:'책상(중):분해(O,X)', cbm:1.123, icon:'desk', size:'md', needsAssembly:true},
-    {label:'책상(대):분해(O,X)', cbm:1.645, icon:'desk', size:'lg', needsAssembly:true},
-    {label:'책장', cbm:0.677, icon:'bookshelf', size:'md', variantSet:'bookshelf'},
+    {label:'책상', cbm:1.386, icon:'desk', size:'md', variantSet:'desk', needsAssembly:true},
+    {label:'책상용 작은 서랍장', cbm:0.313, icon:'archive'},
     {label:'사무용 의자', cbm:0.822, icon:'office-chair'},
     {label:'일반 의자', cbm:0.584, icon:'plain-chair'},
-    {label:'책상용 작은 서랍장', cbm:0.313, icon:'archive'},
+    {label:'Folding 간이의자', cbm:0.226, icon:'folding-chair'},
+    {label:'책장', cbm:0.677, icon:'bookshelf', size:'md', variantSet:'bookshelf'},
+    {label:'장롱 (주니어장)', cbm:2.022, icon:'wardrobe', size:'xl'},
+    {label:'서재 테이블', cbm:1.123, icon:'reading-table'},
     {label:'컴퓨터', icon:'laptop'},
     {label:'프린터', icon:'printer'},
-    {label:'장롱 (주니어장)', cbm:2.022, icon:'wardrobe', size:'xl'},
-    {label:'Folding 간이의자', cbm:0.226, icon:'folding-chair'},
-    {label:'컴퓨터 책상', cbm:1.028, icon:'computer-desk'},
-    {label:'LP, CD, DVD', icon:'disc'},
-    {label:'레고,Figure', icon:'lego'},
-    {label:'서재 태이블', cbm:1.123, icon:'reading-table'},
     {label:'책', icon:'book'},
+    {label:'레고,Figure', icon:'lego'},
     {label:'문구류 및 잡화', icon:'pencil'},
     {label:'서류 및 파일', icon:'folder'},
+    {label:'LP, CD, DVD', icon:'disc'},
   ]},
   {id:'kitchen', name:'부엌', items:[
-    {label:'허리높이 김치냉장고', cbm:1.057, icon:'refrigerator', size:'sm'},
-    {label:'standing 김치냉장고', cbm:1.584, icon:'refrigerator', size:'md'},
-    {label:'2인 식탁', cbm:1.011, icon:'dining-table2', size:'sm', variantSet:'dining'},
-    {label:'4인 식탁', cbm:1.971, icon:'dining-table2', size:'md', variantSet:'dining'},
-    {label:'6인 식탁', cbm:2.887, icon:'dining-table2', size:'lg', variantSet:'dining'},
     {label:'8인 식탁', cbm:4.078, icon:'dining-table2', size:'xl', variantSet:'dining'},
+    {label:'6인 식탁', cbm:2.887, icon:'dining-table2', size:'lg', variantSet:'dining'},
+    {label:'4인 식탁', cbm:1.971, icon:'dining-table2', size:'md', variantSet:'dining'},
+    {label:'2인 식탁', cbm:1.011, icon:'dining-table2', size:'sm', variantSet:'dining'},
+    {label:'냉장고(대형, 중형, 일반, 소형)', cbm:2.63, icon:'refrigerator', size:'xl', variantSet:'fridge'},
+    {label:'김치 냉장고(스탠딩 or 일반)', cbm:1.584, icon:'refrigerator', size:'md', variantSet:'kimchi'},
+    {label:'부페 테이블', cbm:1.389, icon:'buffet'},
+    {label:'그릇 장', cbm:1.485, icon:'display-cabinet'},
     {label:'그릇', icon:'bowl'},
-    {label:'전기밥솥', icon:'rice-cooker'},
-    {label:'커피머신', icon:'coffee'},
     {label:'냄비', icon:'soup'},
     {label:'부엌잡화', icon:'basket'},
     {label:'주방기구', icon:'utensils'},
-    {label:'부페 테이블', cbm:1.389, icon:'buffet'},
-    {label:'그릇 장', cbm:1.485, icon:'display-cabinet'},
-    {label:'양문형 냉장고(대형)', cbm:2.63, icon:'refrigerator', size:'xl'},
-    {label:'양문형 냉장고(중형)', cbm:2.267, icon:'refrigerator', size:'lg'},
-    {label:'일반형 냉장고', cbm:1.744, icon:'refrigerator', size:'md'},
-    {label:'소형 냉장고', cbm:0.482, icon:'refrigerator', size:'sm'},
+    {label:'전기밥솥', icon:'rice-cooker'},
+    {label:'커피머신', icon:'coffee'},
     {label:'전자레인지', icon:'microwave'},
     {label:'정수기', icon:'dispenser'},
     {label:'교자상', icon:'low-table'},
@@ -1161,7 +1167,7 @@ const DIM_DATA = {
   'tv': {w:64, d:6, h:35, realcbm:0.346, qty:1, loadcbm:0.508},
   '소파3인': {w:83, d:35, h:33, realcbm:2.467, qty:1, loadcbm:3.157},
   '베이비그랜드피아노': {w:59, d:59, h:39, realcbm:3.493, qty:1, loadcbm:4.506},
-  'tv캐비닛': {w:59, d:16, h:18, realcbm:0.437, qty:1, loadcbm:0.708},
+  'tv스탠드': {w:59, d:16, h:18, realcbm:0.437, qty:1, loadcbm:0.708},
   'ck침대': {w:72, d:84, h:23, realcbm:3.579, qty:1, loadcbm:4.403},
   '돌침대': {w:59, d:79, h:23, realcbm:2.758, qty:1, loadcbm:3.558},
   '협탁': {w:22, d:18, h:32, realcbm:0.326, qty:1, loadcbm:0.486},
@@ -1179,7 +1185,7 @@ const DIM_DATA = {
   '책상중분해ox': {w:47, d:24, h:30, realcbm:0.871, qty:1, loadcbm:1.123},
   '사무용의자': {w:24, d:24, h:43, realcbm:0.637, qty:1, loadcbm:0.822},
   '장롱주니어장': {w:39, d:22, h:71, realcbm:1.567, qty:1, loadcbm:2.022},
-  '서재태이블': {w:47, d:24, h:30, realcbm:0.871, qty:1, loadcbm:1.123},
+  '서재테이블': {w:47, d:24, h:30, realcbm:0.871, qty:1, loadcbm:1.123},
   '책상대분해ox': {w:59, d:28, h:30, realcbm:1.275, qty:1, loadcbm:1.645},
   '일반의자': {w:20, d:22, h:40, realcbm:0.453, qty:1, loadcbm:0.584},
   'folding간이의자': {w:18, d:20, h:22, realcbm:0.204, qty:1, loadcbm:0.226},
@@ -1232,7 +1238,7 @@ const FORMULA_DATA = {
   'tv': {w:64, d:6, h:35, mult:1.47, ea:1},
   '소파3인': {w:83, d:35, h:33, mult:1.28, ea:1},
   '베이비그랜드피아노': {w:59, d:59, h:39, mult:1.29, ea:1},
-  'tv캐비닛': {w:59, d:16, h:18, mult:1.62, ea:1},
+  'tv스탠드': {w:59, d:16, h:18, mult:1.62, ea:1},
   'ck침대': {w:72, d:84, h:23, mult:1.23, ea:1},
   '돌침대': {w:59, d:79, h:23, mult:1.29, ea:1},
   '협탁': {w:22, d:18, h:32, mult:1.49, ea:1},
@@ -1250,7 +1256,7 @@ const FORMULA_DATA = {
   '책상중분해ox': {w:47, d:24, h:30, mult:1.29, ea:1},
   '사무용의자': {w:24, d:24, h:43, mult:1.29, ea:1},
   '장롱주니어장': {w:39, d:22, h:71, mult:1.29, ea:1},
-  '서재태이블': {w:47, d:24, h:30, mult:1.29, ea:1},
+  '서재테이블': {w:47, d:24, h:30, mult:1.29, ea:1},
   '책상대분해ox': {w:59, d:28, h:30, mult:1.29, ea:1},
   '일반의자': {w:20, d:22, h:40, mult:1.29, ea:1},
   'folding간이의자': {w:18, d:20, h:22, mult:1.11, ea:1},
@@ -1310,6 +1316,29 @@ const VARIANT_SETS = {
     {key:'medium', label:'중', desc:'높이 47inch 이상'},
     {key:'small',  label:'소', desc:'높이 30inch 이상'},
   ],
+  piano: [
+    {key:'grand',   label:'Grand',   desc:'그랜드 피아노'},
+    {key:'upright', label:'Upright', desc:'업라이트 피아노'},
+  ],
+  drawer: [
+    {key:'d3', label:'3단', desc:'서랍 3단'},
+    {key:'d5', label:'5단', desc:'서랍 5단'},
+  ],
+  fridge: [
+    {key:'xl',      label:'대형', desc:'양문형 대형'},
+    {key:'lg',      label:'중형', desc:'양문형 중형'},
+    {key:'normal',  label:'일반', desc:'일반형 냉장고'},
+    {key:'small',   label:'소형', desc:'소형 냉장고'},
+  ],
+  kimchi: [
+    {key:'standing', label:'스탠딩', desc:'세로형 (standing)'},
+    {key:'normal',   label:'일반',   desc:'허리높이'},
+  ],
+  desk: [
+    {key:'large',  label:'대형 책상',       desc:'가로 70inch 이상'},
+    {key:'medium', label:'중형 책상',       desc:'가로 48inch 이상'},
+    {key:'small',  label:'소형 컴퓨터 책상', desc:'가로 48inch 미만'},
+  ],
 };
 
 const VARIANT_DATA = {
@@ -1365,6 +1394,31 @@ const VARIANT_DATA = {
     both:  [{name:'8인 식탁 세트 (식탁+의자 8개)', w:79, d:43, h:34, real:3.161, load:4.078}],
     table: [{name:'8인 식탁 테이블',    w:79, d:39, h:12, real:0.951, load:1.227}],
     chair: [{name:'8인 식탁 의자 (8개)', w:18, d:20, h:33, real:0.306, load:3.155}],
+  },
+  // 피아노 / 서랍장 / 냉장고 / 김치냉장고 — 기존 개별 항목의 값을 그대로 옮긴 것이라 금액 변화 없음
+  'GRAND or Upright 피아노': {
+    grand:   [{name:'그랜드 피아노',   w:59, d:69, h:39, real:4.085, load:5.270}],
+    upright: [{name:'Upright 피아노', w:59, d:24, h:47, real:1.712, load:3.048}],
+  },
+  '서랍장 3단 or 5단': {
+    d3: [{name:'서랍장(3단)', w:44, d:18, h:28, real:0.571, load:0.907}],
+    d5: [{name:'서랍장(5단)', w:40, d:18, h:48, real:0.889, load:1.236}],
+  },
+  '냉장고(대형, 중형, 일반, 소형)': {
+    xl:     [{name:'양문형 냉장고(대형)', w:36, d:31, h:71, real:2.039, load:2.630}],
+    lg:     [{name:'양문형 냉장고(중형)', w:33, d:30, h:69, real:1.758, load:2.267}],
+    normal: [{name:'일반형 냉장고',       w:28, d:28, h:67, real:1.352, load:1.744}],
+    small:  [{name:'소형 냉장고',         w:20, d:22, h:33, real:0.374, load:0.482}],
+  },
+  '김치 냉장고(스탠딩 or 일반)': {
+    standing: [{name:'standing 김치냉장고', w:24, d:28, h:71, real:1.228, load:1.584}],
+    normal:   [{name:'허리높이 김치냉장고', w:35, d:26, h:35, real:0.820, load:1.057}],
+  },
+  // 책상 — 엑셀(앱용 물품리스트) 실측값. 세 구성 모두 분해 여부를 묻고, 분해되면 60%를 적용한다.
+  '책상': {
+    large:  [{name:'책상(대)',        w:78, d:28, h:30, real:1.686, load:2.175}],
+    medium: [{name:'책상(중)',        w:58, d:24, h:30, real:1.075, load:1.386}],
+    small:  [{name:'컴퓨터 책상(소)', w:43, d:24, h:30, real:0.797, load:1.028}],
   },
   // 장식장 — 대/중/소 모두 엑셀 실측값
   '장식장': {
@@ -1540,8 +1594,15 @@ function findCat(id){
   return null;
 }
 
-function deleteLastPhoto(cat){
-  const idx = state.items.map(i=>i.catId).lastIndexOf(cat.id);
+// 한 품목을 여러 개 찍을 수 있는 상한. 넘기면 사진 업로드 시간이 지나치게 길어진다.
+const MAX_PER_CATEGORY = 5;
+
+// n번째 사진만 골라 지운다 (카드가 사진 단위로 나뉘어 있으므로)
+function deletePhotoAt(cat, n){
+  const entries = state.items.filter(i=>i.catId===cat.id);
+  const target = entries[n];
+  if(!target) return;
+  const idx = state.items.indexOf(target);
   if(idx === -1) return;
   state.items.splice(idx, 1);
   renderTabs();
@@ -1632,6 +1693,9 @@ function goStep(n){
 // 화면 맨 아래까지 스크롤했을 때, 마지막 카드와 하단 버튼 사이 여백이
 // 카드끼리의 간격(16px)과 똑같아지도록 화면 아래 패딩을 바 높이에 맞춰 계산한다.
 // (바 높이 = 위쪽 패딩 18px + 버튼들 + 아래 패딩 20px 이므로 패딩 = 바높이 - 18)
+// 화면마다 마지막 요소와 버튼 사이에 두고 싶은 여백.
+// 2단계는 품목 카드가 10px 간격 그리드라 같은 10px, 나머지는 카드 margin(16px)이 이미 있어 0.
+const BOTTOM_GAP = {1:0, 2:10, 3:0};
 function syncBottomPadding(){
   for(let i=1;i<=3;i++){
     const bar = document.getElementById('bar-'+i);
@@ -1639,7 +1703,7 @@ function syncBottomPadding(){
     if(!bar || !screen) continue;
     if(bar.style.display === 'none') continue;   // 안 보이는 바는 높이를 잴 수 없음
     const barH = bar.offsetHeight;
-    if(barH > 0) screen.style.paddingBottom = (barH - 18) + 'px';
+    if(barH > 0) screen.style.paddingBottom = (barH - 18 + (BOTTOM_GAP[i] || 0)) + 'px';
   }
 }
 window.addEventListener('load', syncBottomPadding);
@@ -2133,26 +2197,42 @@ function renderItemList(){
           </div>
         `;
       }else{
-        const count = entries.length;
-        const lastEntry = [...entries].reverse()[0];
-        const lastPhoto = lastEntry?.photo;
-        const iconInner = lastPhoto ? `<img src="${lastPhoto}">` : svgIcon(it.icon, it.size);
-        const assemblyTag = (it.needsAssembly && lastEntry?.assembly)
-          ? `<div class="assembly-tag ${lastEntry.assembly==='X'?'x':''}">${lastEntry.assembly}</div>`
-          : '';
-        const variantTag = lastEntry?.variantKey
-          ? `<div class="variant-tag">${variantLabelOf(it, lastEntry.variantKey)}</div>`
-          : '';
-        return `
-          <div class="item-card" data-cat="${it.id}">
-            ${count>0?`<button class="photo-delete" data-role="delete" title="마지막 촬영 사진 삭제">×</button>`:''}
-            ${count>0?`<div class="qty">×${count}</div>`:''}
+        // 촬영한 사진마다 카드를 하나씩 만든다. 같은 물건이 2개 이상이면
+        // 각각 따로 찍어야 부피가 정확히 잡히고, 견적서에도 따로 표시된다.
+        const cards = entries.map((e, idx)=>{
+          const iconInner = e.photo ? `<img src="${e.photo}">` : svgIcon(it.icon, it.size);
+          const assemblyTag = (it.needsAssembly && e.assembly)
+            ? `<div class="assembly-tag ${e.assembly==='X'?'x':''}">${e.assembly}</div>` : '';
+          const variantTag = e.variantKey
+            ? `<div class="variant-tag">${variantLabelOf(it, e.variantKey)}</div>` : '';
+          const ord = entries.length>1 ? `<div class="ord">${idx+1}</div>` : '';
+          return `
+          <div class="item-card filled" data-cat="${it.id}" data-idx="${idx}">
+            <button class="photo-delete" data-role="delete" title="이 사진 삭제">×</button>
+            ${ord}
             <div class="icon" data-role="thumb">${iconInner}</div>
             <div class="lbl">${it.label}</div>
             ${assemblyTag}
             ${variantTag}
-          </div>
-        `;
+          </div>`;
+        });
+
+        if(entries.length === 0){
+          cards.push(`
+          <div class="item-card" data-cat="${it.id}" data-role="add">
+            <div class="icon">${svgIcon(it.icon, it.size)}</div>
+            <div class="lbl">${it.label}</div>
+          </div>`);
+        }else if(entries.length < MAX_PER_CATEGORY){
+          // 이미 찍은 품목 옆에 "하나 더 있어요" 카드를 붙여 둔다.
+          // 빈 카드가 "꼭 채워야 하는 칸"으로 보이지 않도록 문구를 따로 쓴다.
+          cards.push(`
+          <div class="item-card more-card" data-cat="${it.id}" data-role="add">
+            <div class="more-plus">＋</div>
+            <div class="lbl">${it.label}<br><span class="more-sub">하나 더 있어요</span></div>
+          </div>`);
+        }
+        return cards.join('');
       }
     }).join('');
 
@@ -2166,19 +2246,22 @@ function renderItemList(){
         if(delBtn){
           delBtn.addEventListener('click', (e)=>{
             e.stopPropagation();
-            deleteLastPhoto(cat);
+            deletePhotoAt(cat, parseInt(card.dataset.idx, 10));
           });
         }
-        card.addEventListener('click', ()=>{
-          activeCatId = cat.id;
-          const opts = variantOptions(cat);
-          if(opts){
-            askVariant(cat, opts);   // 구성 선택 후에 촬영 시작
-          }else{
-            activeVariantKey = null;
-            openCamera();
-          }
-        });
+        // 촬영은 "추가" 카드에서만 시작한다. 이미 찍은 카드를 눌러 덮어쓰는 실수를 막는다.
+        if(card.dataset.role === 'add'){
+          card.addEventListener('click', ()=>{
+            activeCatId = cat.id;
+            const opts = variantOptions(cat);
+            if(opts){
+              askVariant(cat, opts);   // 구성 선택 후에 촬영 시작
+            }else{
+              activeVariantKey = null;
+              openCamera();
+            }
+          });
+        }
       }
     });
   }
@@ -2901,14 +2984,16 @@ function buildPhotoRowsForPdf(){
   Object.values(groups).forEach(entries=>{
     const cat = findCat(entries[0].catId);
     const count = entries.length;
-    const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
-    // 각 사진마다 AI가 판정한 크기 단계(±%)를 적재CBM에 반영
-    const tierFactorSum = entries.reduce((sum,e)=> sum + (1 + tierPct(e.sizeTier)/100), 0);
+    // 분해 여부는 사진마다 따로 물으므로 사진 단위로 60%를 적용한다.
+    // (카드가 사진별로 나뉘어 있어 같은 품목이라도 O/X가 섞일 수 있음)
+    const factor = e => (1 + tierPct(e.sizeTier)/100) * ((cat.needsAssembly && e.assembly==='O') ? 0.6 : 1);
+    const tierFactorSum = entries.reduce((sum,e)=> sum + factor(e), 0);
+    const realFactorSum = entries.reduce((sum,e)=> sum + ((cat.needsAssembly && e.assembly==='O') ? 0.6 : 1), 0);
     rowPartsFor(cat, entries).forEach(p=>{
-      const loadTotal = p.load * tierFactorSum * discount;
+      const loadTotal = p.load * tierFactorSum;
       totalLoad += loadTotal;
       // PDF는 고객용이라 "(AI크기판정 ...)" 문구는 표시하지 않음 (계산에는 계속 반영됨)
-      rows.push({label:p.name, w:p.w, d:p.d, h:p.h, real:p.real, count, load:loadTotal});
+      rows.push({label:p.name, w:p.w, d:p.d, h:p.h, real:p.real*realFactorSum/count, count, load:loadTotal});
     });
   });
   return {rows, totalLoad};
@@ -3140,8 +3225,9 @@ async function submitQuote(id){
     const cat = findCat(entries[0].catId);
     const count = entries.length;
     const photoTag = entries.some(e=>e.cloudUrl || e.photo) ? '📷' : '-';
-    const discount = (cat.needsAssembly && entries.some(e=>e.assembly==='O')) ? 0.6 : 1;
-    const tierFactorSum = entries.reduce((sum,e)=> sum + (1 + tierPct(e.sizeTier)/100), 0);
+    const factor = e => (1 + tierPct(e.sizeTier)/100) * ((cat.needsAssembly && e.assembly==='O') ? 0.6 : 1);
+    const tierFactorSum = entries.reduce((sum,e)=> sum + factor(e), 0);
+    const realFactorSum = entries.reduce((sum,e)=> sum + ((cat.needsAssembly && e.assembly==='O') ? 0.6 : 1), 0);
     const assemblyTxt = entries.some(e=>e.assembly) ? entries.map(e=>e.assembly?`(${e.assembly})`:'').join(' ') : '';
     const mismatchTxt = entries.some(e=>e.mismatchFlag) ? ' ⚠️사진확인필요' : '';
     const tierVals = entries.map(e=>tierPct(e.sizeTier));
@@ -3150,8 +3236,8 @@ async function submitQuote(id){
     const noteTxt = vTxt + ' ' + assemblyTxt + mismatchTxt + tierTxt;
     // 구성(Both 등)이 지정된 항목은 부품별로 행이 나뉘어 출력된다
     return rowPartsFor(cat, entries).map(p=>{
-      const realTotal = (p.real*count*discount).toFixed(3);
-      const loadTotal = (p.load*tierFactorSum*discount).toFixed(3);
+      const realTotal = (p.real*realFactorSum).toFixed(3);
+      const loadTotal = (p.load*tierFactorSum).toFixed(3);
       return `<tr>
       <td style="padding:6px 8px;font-size:13px;text-align:center;">${photoTag}</td>
       <td style="padding:6px 8px;font-size:13px;">${escapeHtml(p.name)}${noteTxt}</td>
