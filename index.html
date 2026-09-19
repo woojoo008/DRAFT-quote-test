@@ -1712,6 +1712,63 @@ function goStep(n){
 // 화면마다 마지막 요소와 버튼 사이에 두고 싶은 여백.
 // 2단계는 품목 카드가 10px 간격 그리드라 같은 10px, 나머지는 카드 margin(16px)이 이미 있어 0.
 const BOTTOM_GAP = {1:0, 2:10, 3:0};
+
+/* ===== 하단 버튼에 가려진 요소 자동 정렬 =====
+   화면 아래에 버튼이 고정돼 있어, 스크롤을 멈춘 자리에서 입력칸이 버튼에
+   절반쯤 걸치는 일이 생긴다. 스크롤이 멎으면 걸쳐 있는 칸을 찾아
+   절반 이상 보이면 통째로 위로 올리고, 절반 이상 가려졌으면 아래로 내린다. */
+const SNAP_SEL = '.field, .rev-card, .item-card, .custom-note-wrap';
+const SNAP_MARGIN = 10;      // 버튼과 띄울 최소 간격
+let snapTimer = null, snapping = false;
+
+function visibleBarTop(){
+  for(let i=1;i<=3;i++){
+    const bar = document.getElementById('bar-'+i);
+    if(bar && bar.style.display !== 'none' && bar.offsetHeight > 0){
+      return window.innerHeight - bar.offsetHeight + 18;   // 버튼 윗변 위치
+    }
+  }
+  return null;
+}
+
+function snapOverlappedElement(){
+  if(snapping) return;
+  if(anyOpenModal()) return;
+  if(!document.getElementById('camera-modal').classList.contains('hidden')) return;
+  const barTop = visibleBarTop();
+  if(barTop === null) return;
+
+  // 이미 맨 아래까지 내려왔으면 더 움직일 수 없으니 그대로 둔다
+  const atBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 2;
+
+  const active = document.querySelector('.screen.active');
+  if(!active) return;
+  for(const el of active.querySelectorAll(SNAP_SEL)){
+    const r = el.getBoundingClientRect();
+    if(r.height === 0) continue;
+    if(r.top >= barTop || r.bottom <= barTop) continue;   // 걸쳐 있지 않음
+
+    const mid = (r.top + r.bottom) / 2;
+    let delta;
+    if(mid < barTop){
+      if(atBottom) return;                                 // 더 내릴 수 없음
+      delta = r.bottom - (barTop - SNAP_MARGIN);            // 통째로 위로
+    }else{
+      delta = r.top - (barTop + SNAP_MARGIN);               // 통째로 아래로 (음수)
+    }
+    if(Math.abs(delta) < 6) return;                         // 거의 맞아 있으면 건드리지 않음
+
+    snapping = true;
+    window.scrollBy({top: delta, behavior: 'smooth'});
+    setTimeout(()=>{ snapping = false; }, 450);
+    return;
+  }
+}
+
+window.addEventListener('scroll', ()=>{
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(snapOverlappedElement, 160);   // 손가락을 뗀 뒤에만 움직인다
+}, {passive:true});
 function syncBottomPadding(){
   for(let i=1;i<=3;i++){
     const bar = document.getElementById('bar-'+i);
@@ -1724,6 +1781,9 @@ function syncBottomPadding(){
 }
 window.addEventListener('load', syncBottomPadding);
 window.addEventListener('resize', syncBottomPadding);
+// 웹폰트가 늦게 오면 버튼 높이가 달라져 처음 계산이 어긋난다 — 폰트가 준비되면 다시 잰다
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(syncBottomPadding);
+window.addEventListener('orientationchange', ()=> setTimeout(syncBottomPadding, 250));
 document.querySelectorAll('.step-dot').forEach(d=>{
   d.addEventListener('click', ()=>{
     const target = parseInt(d.dataset.step);
@@ -1822,12 +1882,15 @@ const DEST_SUB = {
       sub.classList.add('show');
       out.value = '';                     // 세부 지역을 고르기 전까진 미선택 상태
       // 새로 나타난 선택창이 하단 고정 버튼에 가려지지 않도록 화면 가운데로 끌어올린다
-      setTimeout(()=> document.getElementById('f-dest')
-        .scrollIntoView({block:'center', behavior:'smooth'}), 60);
+      setTimeout(()=>{
+        syncBottomPadding();
+        document.getElementById('f-dest').scrollIntoView({block:'center', behavior:'smooth'});
+      }, 60);
     }else{
       sub.classList.remove('show');
       sub.innerHTML = '';
       out.value = g;
+      syncBottomPadding();
     }
     document.getElementById('f-dest').classList.remove('error');
   });
@@ -2433,7 +2496,13 @@ function hasEnteredData(){
   if(state.items.length) return true;
   if(customSlots.some(x=>x)) return true;
   if((customNote||'').trim()) return true;
-  return Object.values(state.customer).some(v=>(v||'').trim());
+  if(Object.values(state.customer).some(v=>(v||'').trim())) return true;
+  // 1단계 값은 "다음"을 눌러야 state 로 옮겨지므로 입력칸을 직접 확인한다.
+  // (그러지 않으면 날짜만 고르고 뒤로가기를 눌렀을 때 그냥 나가버린다)
+  return fields.some(f=>{
+    const el = document.getElementById(f.id);
+    return el && (el.value || '').trim();
+  });
 }
 
 function leaveApp(){
@@ -2466,6 +2535,8 @@ function handleBackNavigation(){
     showToast('전송이 진행 중이에요. 잠시만 기다려 주세요.');
     return;
   }
+  const cal = document.getElementById('cal-overlay');
+  if(cal && cal.classList.contains('show')){ closeCalendar(); return; }
   const open = anyOpenModal();
   if(open){ open.classList.add('hidden'); return; }
   if(currentStep === 4){ confirmExit(); return; }
