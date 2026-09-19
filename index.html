@@ -2744,6 +2744,10 @@ async function analyzePhoto(cat, imageUrl, variantKey){
       catLabel: (vParts ? vParts[0].name : cat.label),
       dimText
     });
+    // 서버가 왜 판정을 못 했는지 알려주면 콘솔에 남긴다 (원인 파악용)
+    if(parsed.reason && parsed.reason !== 'ok'){
+      console.warn('AI 사진 판정 건너뜀 —', parsed.reason);
+    }
     let tier = parseInt(parsed.tier);
     if(!Number.isInteger(tier) || tier<-10 || tier>10) tier = 0;
     const matches = parsed.matches !== false; // 응답이 애매하면 기본은 true(통과)로 처리
