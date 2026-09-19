@@ -258,8 +258,8 @@
   .more-card .lbl{color:var(--muted);}
   .more-plus{
     font-size:26px;font-weight:800;color:var(--orange-dark);line-height:1;
-    margin-bottom:6px;
   }
+  .more-card .icon{background:transparent;}
   .more-sub{font-size:10px;color:var(--orange-dark);font-weight:700;}
 
   .item-card{
@@ -2282,7 +2282,7 @@ function renderItemList(){
           // 빈 카드가 "꼭 채워야 하는 칸"으로 보이지 않도록 문구를 따로 쓴다.
           cards.push(`
           <div class="item-card more-card" data-cat="${it.id}" data-role="add">
-            <div class="more-plus">＋</div>
+            <div class="icon"><span class="more-plus">＋</span></div>
             <div class="lbl">${it.label}<br><span class="more-sub">하나 더 있어요</span></div>
           </div>`);
         }
@@ -2552,9 +2552,10 @@ async function handleCapturedPhoto(file){
 
   if(!activeCatId) return;
   const cat = findCat(activeCatId);
-  const row = document.querySelector(`.item-card[data-cat="${activeCatId}"]`);
-  const thumbEl = row?.querySelector('[data-role="thumb"]');
-  if(thumbEl) thumbEl.innerHTML = PROC_SPINNER;
+  // 촬영은 항상 "추가" 카드에서 시작하므로 그 카드의 아이콘 자리에 표시한다.
+  // (같은 품목 카드가 여러 개일 수 있어 data-cat 만으로 찾으면 엉뚱한 카드를 집는다)
+  const procIcon = document.querySelector(`.item-card[data-cat="${activeCatId}"][data-role="add"] .icon`);
+  if(procIcon) procIcon.innerHTML = PROC_SPINNER;
 
   let entry;
   try{
