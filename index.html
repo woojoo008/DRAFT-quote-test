@@ -269,7 +269,7 @@
     text-align:center;cursor:pointer;position:relative;min-height:106px;justify-content:center;gap:8px;
     min-width:0;box-sizing:border-box;
   }
-  .item-card.qty-card{min-height:132px;cursor:default;}
+  .item-card.qty-card{min-height:106px;cursor:default;}   /* 사진 카드와 같은 높이 */
   .item-card:active{transform:scale(.97);}
   .item-card .icon{font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;}
   .item-card .icon img{width:44px;height:44px;border-radius:10px;object-fit:cover;}
@@ -282,13 +282,15 @@
   }
 
   /* quantity-mode cards */
-  .item-card.qty-card{padding:14px 8px 10px;gap:6px;}
+  .item-card.qty-card{padding:12px 8px 10px;gap:5px;}
   .item-card.qty-card.active{border-color:var(--orange);background:#fffaf3;}
-  .item-card.qty-card .icon svg.licon{color:#a39c8a;}
+  /* 높이를 맞추기 위해 아이콘만 조금 줄인다 — 버튼 크기는 그대로 둬서 누르기 편하게 */
+  .item-card.qty-card .icon svg.licon{color:#a39c8a;width:22px;height:22px;}
+  .item-card.qty-card.active .icon svg.licon{width:22px;height:22px;}
   .item-card.qty-card.active .icon svg.licon{color:var(--orange-dark);}
   .qty-stepper{
-    display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;
-    background:#f4f1e9;border-radius:20px;padding:4px 6px;width:100%;box-sizing:border-box;min-width:0;
+    display:flex;align-items:center;justify-content:center;gap:8px;margin-top:2px;
+    background:#f4f1e9;border-radius:20px;padding:3px 6px;width:100%;box-sizing:border-box;min-width:0;
   }
   .qty-stepper .step{
     width:24px;height:24px;border-radius:50%;border:none;background:#fff;
@@ -421,6 +423,7 @@
   .contact-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);text-decoration:none;color:inherit;}
   .contact-ico{font-size:20px;width:32px;text-align:center;flex-shrink:0;}
   .contact-body{flex:1;}
+  .ck-sub{font-weight:400;color:var(--muted);font-size:10.5px;}
   .contact-body .ck{font-size:11.5px;color:var(--muted);}
   .contact-body .cv{font-size:14.5px;font-weight:700;color:var(--navy);}
   .contact-arrow{font-size:20px;color:#c8c2b3;}
@@ -691,7 +694,15 @@
 
     <div class="rev-card" id="rev-estimate-card">
       <h3>이용 안내 및 동의</h3>
-      <label class="agree-row" for="agree-checkbox">
+      <label class="agree-row" for="agree-duplicate-checkbox">
+        <input type="checkbox" id="agree-duplicate-checkbox">
+        <span class="agree-text">
+          <p>본 견적서는 이우주 팀장에게도 함께 전달 되오니 동일한 내용으로 중복 신청 하지 않도록 부탁 드립니다.</p>
+        </span>
+      </label>
+      <div class="err-msg" id="agree-duplicate-err">위 내용을 확인해 주셔야 견적 신청이 가능해요.</div>
+
+      <label class="agree-row" for="agree-checkbox" style="margin-top:16px;">
         <input type="checkbox" id="agree-checkbox">
         <span class="agree-text">
           <p>본 견적은 촬영해 주신 사진과 입력해 주신 정보를 바탕으로 산정된 예상 금액으로 확정금액이 아닙니다.</p>
@@ -701,14 +712,6 @@
         </span>
       </label>
       <div class="err-msg" id="agree-err">위 내용에 동의해 주셔야 견적 신청이 가능해요.</div>
-
-      <label class="agree-row" for="agree-duplicate-checkbox" style="margin-top:16px;">
-        <input type="checkbox" id="agree-duplicate-checkbox">
-        <span class="agree-text">
-          <p>본 견적서는 이우주 팀장에게도 함께 전달 되오니 동일한 내용으로 중복 신청 하지 않도록 부탁 드립니다.</p>
-        </span>
-      </label>
-      <div class="err-msg" id="agree-duplicate-err">위 내용을 확인해 주셔야 견적 신청이 가능해요.</div>
     </div>
   </div>
 
@@ -764,7 +767,7 @@
       </a>
       <a class="contact-row" id="contact-kakao" href="kakaotalk://">
         <div class="contact-ico">💬</div>
-        <div class="contact-body"><div class="ck">카카오톡 ID</div><div class="cv">HDSUSA</div></div>
+        <div class="contact-body"><div class="ck">카카오톡 ID <span class="ck-sub">— 눌러서 ID 복사</span></div><div class="cv">HDSUSA</div></div>
         <div class="contact-arrow">›</div>
       </a>
     </div>
@@ -848,6 +851,18 @@
       <div class="modal-sub">크기별로 개수를 입력해 주세요.</div>
       <div id="qtygroup-rows"></div>
       <button class="modal-btn o" id="qtygroup-close" style="width:100%;margin-top:14px;">확인</button>
+    </div>
+  </div>
+
+  <!-- 헤더 로고를 눌러 회사 홈페이지로 나갈 때의 확인 -->
+  <div class="modal-overlay hidden" id="nav-modal">
+    <div class="modal-card">
+      <div class="modal-title">회사 홈페이지로 이동할까요?</div>
+      <div class="modal-sub">작성 중인 내용이 지워질 수 있습니다.</div>
+      <div class="modal-btns">
+        <button class="modal-btn o" id="nav-stay">계속 작성하기</button>
+        <button class="modal-btn x" id="nav-go">이동하기</button>
+      </div>
     </div>
   </div>
 
@@ -1750,6 +1765,7 @@ const state = {
   items:[] // {catId,label,min,max,cuft,note,photo}
 };
 let aiSkippedCount = 0;   // AI 크기 판정을 못 한 사진 수 (접수 기록용)
+let maxStepReached = 1;   // 지나온 최대 단계 (탭으로 되돌아가기/다시 앞으로 가기에 사용)
 let activeCatId = null;
 let activeVariantKey = null;   // 구성 선택(Both/Mattress/Frame, Both/Table/Chair) — 촬영 직전에 정해짐
 let customSlots = [null, null]; // each entry: null (empty "사진찍기" box) or {photo, cloudUrl}
@@ -1763,14 +1779,16 @@ function goStep(n){
     stopCameraStream(); // 물품촬영 단계를 벗어나면 카메라를 꺼서 배터리/개인정보를 보호 (다시 이 단계로 오면 최초 1회만 다시 권한을 물어봄)
   }
   currentStep = n;
+  if(n < 4) maxStepReached = Math.max(maxStepReached, n);   // 제출 전까지 지나온 최대 단계
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
   document.querySelectorAll('.step-dot').forEach(d=>{
     const s = parseInt(d.dataset.step);
     d.classList.toggle('active', s===n);
     d.classList.toggle('done', s<n);
-    // 완료된(지나온) 단계이고, 아직 제출 전(4단계 진입 전)일 때만 클릭으로 되돌아갈 수 있음
-    d.classList.toggle('clickable', s<n && n<4);
+    // 한 번 지나온 단계면 앞뒤 어느 쪽으로든 오갈 수 있다. 단 제출완료(4단계)는 예외 —
+    // 들어가지도, 거기서 나오지도 못한다.
+    d.classList.toggle('clickable', s<=maxStepReached && s!==n && s<4 && n<4);
   });
   for(let i=1;i<=3;i++) document.getElementById('bar-'+i).style.display = (i===n)?'block':'none';
   syncBottomPadding();
@@ -1877,9 +1895,10 @@ window.addEventListener('orientationchange', ()=> setTimeout(syncBottomPadding, 
 document.querySelectorAll('.step-dot').forEach(d=>{
   d.addEventListener('click', ()=>{
     const target = parseInt(d.dataset.step);
-    if(d.classList.contains('clickable') && target < currentStep){
-      goStep(target);
-    }
+    if(!d.classList.contains('clickable')) return;
+    // 1단계에서 앞으로 나갈 때는 입력값을 다시 검증한다 (내용을 고쳤을 수 있으므로)
+    if(currentStep === 1 && target > 1){ validateStep1AndGo(target); return; }
+    goStep(target);
   });
 });
 
@@ -2115,7 +2134,7 @@ document.getElementById('cal-overlay').addEventListener('click', (e)=>{
   if(e.target.id==='cal-overlay') closeCalendar();
 });
 
-document.getElementById('btn-1-next').addEventListener('click', async ()=>{
+async function validateStep1AndGo(targetStep){
   document.querySelector('#f-zip .err-msg').textContent = '5자리 ZIP CODE를 입력해 주세요.';
   let allValid = true;
   fields.forEach(f=>{
@@ -2164,8 +2183,9 @@ document.getElementById('btn-1-next').addEventListener('click', async ()=>{
 
   zoneEl.classList.add('hidden');
   document.getElementById('s1-banner').classList.remove('show');
-  goStep(2);
-});
+  goStep(targetStep || 2);
+}
+document.getElementById('btn-1-next').addEventListener('click', ()=> validateStep1AndGo(2));
 
 // ZIP 실재 여부 + 서비스 지역 여부를 서버가 한 번에 판정한다.
 // 서버에 못 닿으면 막지 않고 통과시킨다 (네트워크 문제로 접수 자체가 끊기는 편이 더 나쁨).
@@ -2611,7 +2631,7 @@ function armBackGuard(){
 armBackGuard();
 
 function anyOpenModal(){
-  return ['variant-modal','assembly-modal','mismatch-modal','zone-modal','qtygroup-modal','exit-modal']
+  return ['variant-modal','assembly-modal','mismatch-modal','zone-modal','qtygroup-modal','nav-modal','exit-modal']
     .map(id=>document.getElementById(id))
     .find(el=>el && !el.classList.contains('hidden'));
 }
@@ -2973,9 +2993,8 @@ function renderReview(){
       ? `<img src="${it.photo}">`
       : `<div class="rev-icon-wrap">${svgIcon(cat?.icon || 'package', cat?.size)}</div>`;
     const subLine = it.note ? escapeHtml(it.note) : '';
-    const rightCol = isQty
-      ? `<div class="cuft qty-col">×${it.qty}</div>`
-      : (()=>{ const r=cbmRange(effectiveCbm(it, cat)); return `<div class="cuft">${r.low} ~ ${r.high} cbm</div>`; })();
+    // 사진은 한 장이 곧 한 개라 항상 ×1. 같은 품목을 두 번 찍었으면 줄이 두 개 나온다.
+    const rightCol = `<div class="cuft qty-col">×${isQty ? it.qty : 1}</div>`;
     return `
     <div class="item-row">
       ${iconInner}
@@ -3188,6 +3207,37 @@ document.getElementById('btn-retry-send').addEventListener('click', ()=>{
   const id = document.getElementById('quote-id').textContent;
   document.getElementById('submit-fail').classList.remove('show');
   runSubmitFlow(id);
+});
+
+// 카카오톡은 ID로 바로 대화방을 여는 링크가 없다. 대신 ID를 클립보드에 복사해 주고
+// 카카오톡을 띄워서, 고객이 검색창에 붙여넣기만 하면 되도록 한다.
+// 작성 중에 헤더 로고를 잘못 눌러 내용이 날아가는 일을 막는다.
+// 입력한 게 없거나 이미 제출이 끝난 뒤에는 그냥 열어 준다.
+(function(){
+  const logo = document.querySelector('.brand-logo-badge');
+  if(!logo) return;
+  const modal = document.getElementById('nav-modal');
+  logo.addEventListener('click', (e)=>{
+    if(currentStep >= 4) return;          // 제출 완료 후에는 지킬 내용이 없음
+    if(!hasEnteredData()) return;         // 아직 아무것도 안 적었으면 그냥 이동
+    e.preventDefault();
+    modal.classList.remove('hidden');
+  });
+  document.getElementById('nav-stay').addEventListener('click', ()=> modal.classList.add('hidden'));
+  document.getElementById('nav-go').addEventListener('click', ()=>{
+    modal.classList.add('hidden');
+    window.open(logo.getAttribute('href'), '_blank', 'noopener');
+  });
+})();
+
+document.getElementById('contact-kakao').addEventListener('click', (e)=>{
+  const id = 'HDSUSA';
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(id);
+      showToast('카카오톡 ID <b>' + id + '</b> 를 복사했어요. 카카오톡 검색창에 붙여넣어 주세요.', 6000);
+    }
+  }catch(err){ console.error('clipboard failed', err); }
 });
 
 document.getElementById('btn-done').addEventListener('click', ()=>{
