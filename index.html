@@ -494,6 +494,17 @@
   @keyframes proc-burst{0%,100%{stroke-dashoffset:6.5;}45%,55%{stroke-dashoffset:0;}}
   @keyframes proc-turn{to{transform:rotate(360deg);}}
 
+  .group-hint{
+    margin-top:6px;font-size:10.5px;font-weight:700;color:var(--orange-dark);
+    background:#fdf3ec;border-radius:6px;padding:3px 0;
+  }
+  .qg-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:11px 0;border-bottom:1px solid var(--line);
+  }
+  .qg-row:last-child{border-bottom:none;}
+  .qg-name{font-size:13.5px;font-weight:700;color:var(--navy);text-align:left;}
+
   /* 서비스 지역 밖 안내 팝업 */
   .zn-title{font-size:14.5px;font-weight:800;color:var(--navy);line-height:1.6;margin-bottom:16px;text-align:center;}
   .zn-link{
@@ -830,6 +841,16 @@
     </div>
   </div>
 
+  <!-- 크기별 수량 입력 (액자 등) -->
+  <div class="modal-overlay hidden" id="qtygroup-modal">
+    <div class="modal-card">
+      <div class="modal-title" id="qtygroup-title">액자</div>
+      <div class="modal-sub">크기별로 개수를 입력해 주세요.</div>
+      <div id="qtygroup-rows"></div>
+      <button class="modal-btn o" id="qtygroup-close" style="width:100%;margin-top:14px;">확인</button>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="exit-modal">
     <div class="modal-card">
       <div class="modal-title">앱을 나가시겠어요?</div>
@@ -1034,7 +1055,6 @@ const SECTIONS = [
     {label:'소파(2인:love seat)', cbm:2.367, icon:'sofa', size:'md'},
     {label:'소파(1인:arm chair)', cbm:1.404, icon:'armchair', size:'sm'},
     {label:'소파옆 협탁', cbm:0.391, icon:'side-table'},
-    {label:'서랍장 3단 or 5단', cbm:0.907, icon:'drawer-chest', size:'sm', variantSet:'drawer'},
     {label:'장식장', cbm:0.874, icon:'wardrobe', size:'md', variantSet:'cabinet'},
     {label:'마사지(안마)의자', cbm:2.015, icon:'massage-chair'},
     {label:'흔들의자', cbm:1.269, icon:'rocking-chair'},
@@ -1043,9 +1063,12 @@ const SECTIONS = [
     {label:'GRAND or Upright 피아노', cbm:5.27, icon:'piano', size:'xl', variantSet:'piano'},
     {label:'런닝머신', cbm:1.529, icon:'treadmill'},
     {label:'스탠딩 에어컨', cbm:1.141, icon:'standing-ac'},
-    {label:'액자(대):72inch', icon:'image'},
-    {label:'액자(중):36inch', icon:'image'},
-    {label:'액자(소):18inch', icon:'image'},
+    // 액자는 카드 하나로 묶고, 누르면 크기별 수량을 한 화면에서 정한다.
+    // 아래 세 항목은 목록에 보이지 않지만 부피 계산·견적서는 예전 그대로 쓴다.
+    {label:'액자', icon:'image', qtyGroup:['액자(대):72inch','액자(중):36inch','액자(소):18inch']},
+    {label:'액자(대):72inch', icon:'image', hiddenInList:true},
+    {label:'액자(중):36inch', icon:'image', hiddenInList:true},
+    {label:'액자(소):18inch', icon:'image', hiddenInList:true},
     {label:'카페트/돗자리', icon:'rug'},
     {label:'장식품 (스탠딩)', icon:'figurine'},
     {label:'도자기', icon:'vase'},
@@ -1058,22 +1081,22 @@ const SECTIONS = [
     {label:'Q침대', cbm:3.354, icon:'bed', size:'md', variantSet:'bed'},
     {label:'D침대', cbm:2.707, icon:'bed', size:'sm', variantSet:'bed'},
     {label:'S침대', cbm:2.005, icon:'bed', size:'sm', variantSet:'bed'},
-    {label:'이층침대', cbm:4.681, icon:'bed', size:'lg', variantSet:'bed'},
-    {label:'돌 침대', cbm:3.558, icon:'bed', size:'lg'},
+    {label:'이층침대', cbm:4.681, icon:'bunk-bed', size:'lg', variantSet:'bed'},
+    {label:'돌 침대', cbm:3.558, icon:'stone-bed', size:'lg'},
     {label:'(아기) 침대, CRIB', cbm:1.849, icon:'crib'},
     {label:'화장대', cbm:1.282, icon:'vanity'},
-    {label:'전기장판', icon:'heating-pad'},
+    {label:'서랍장 3단 or 5단', cbm:0.907, icon:'drawer-chest', size:'sm', variantSet:'drawer'},
     {label:'문갑', cbm:0.818, icon:'chest'},
     {label:'고가구 (코너장)', cbm:1.535, icon:'corner-cabinet'},
-    {label:'고가구 (문갑)', cbm:1.025, icon:'antique-chest'},
-    {label:'고가구 (궤짝)', cbm:0.79, icon:'trunk'},
-    {label:'협탁', cbm:0.486, icon:'side-table'},
+    {label:'고가구 (궤짝)', cbm:0.79, icon:'chest'},
+    {label:'협탁', cbm:0.486, icon:'nightstand'},
     {label:'옷 & 의류', icon:'shirt'},
-    {label:'이불', icon:'duvet'},
-    {label:'거울', icon:'mirror'},
+    {label:'이불', icon:'blanket'},
+    {label:'전신 거울', icon:'mirror'},
     {label:'램프', icon:'lamp'},
-    {label:'스탠드', icon:'lamp-floor'},
+    {label:'스탠드', icon:'floor-lamp'},
     {label:'가습기', icon:'humidifier'},
+    {label:'전기장판', icon:'heat-mat'},
   ]},
   {id:'study', name:'공부방', items:[
     {label:'책상', cbm:1.386, icon:'desk', size:'md', variantSet:'desk', needsAssembly:true},
@@ -1093,10 +1116,10 @@ const SECTIONS = [
     {label:'LP, CD, DVD', icon:'disc'},
   ]},
   {id:'kitchen', name:'부엌', items:[
-    {label:'8인 식탁', cbm:4.078, icon:'dining-table2', size:'xl', variantSet:'dining'},
-    {label:'6인 식탁', cbm:2.887, icon:'dining-table2', size:'lg', variantSet:'dining'},
-    {label:'4인 식탁', cbm:1.971, icon:'dining-table2', size:'md', variantSet:'dining'},
-    {label:'2인 식탁', cbm:1.011, icon:'dining-table2', size:'sm', variantSet:'dining'},
+    {label:'8인 식탁', cbm:4.078, icon:'dining-8', size:'xl', variantSet:'dining'},
+    {label:'6인 식탁', cbm:2.887, icon:'dining-6', size:'xl', variantSet:'dining'},
+    {label:'4인 식탁', cbm:1.971, icon:'dining-4', size:'xl', variantSet:'dining'},
+    {label:'2인 식탁', cbm:1.011, icon:'dining-2', size:'xl', variantSet:'dining'},
     {label:'냉장고(대형, 중형, 일반, 소형)', cbm:2.63, icon:'refrigerator', size:'xl', variantSet:'fridge'},
     {label:'김치 냉장고(스탠딩 or 일반)', cbm:1.584, icon:'refrigerator', size:'md', variantSet:'kimchi'},
     {label:'부페 테이블', cbm:1.389, icon:'buffet'},
@@ -1114,29 +1137,28 @@ const SECTIONS = [
     {label:'식기건조기', icon:'washing-machine'},
   ]},
   {id:'utility', name:'Etc.', items:[
-    {label:'스타일러', cbm:1.047, icon:'styler'},
     {label:'세탁기', cbm:1.144, icon:'washing-machine'},
-    {label:'건조기', cbm:1.144, icon:'washing-machine'},
-    {label:'신발', icon:'footprints'},
-    {label:'욕실용품', icon:'bathtub'},
+    {label:'건조기', cbm:1.144, icon:'dryer'},
+    {label:'스타일러', cbm:1.047, icon:'styler'},
+    {label:'PVC 박스', icon:'box'},
+    {label:'신발', icon:'shoe'},
+    {label:'진공청소기', icon:'vacuum'},
+    {label:'욕실용품', icon:'bath'},
+    {label:'청소도구', icon:'broom'},
     {label:'골프용품', icon:'golf'},
-    {label:'자전거', icon:'bike'},
     {label:'등산용품', icon:'mountain'},
     {label:'캠핑장비', icon:'tent'},
-    {label:'전기히터', icon:'heater'},
-    {label:'진공청소기', icon:'wind'},
-    {label:'선풍기', icon:'fan'},
-    {label:'PVC 박스', icon:'box'},
+    {label:'낚시용품', icon:'fish'},
+    {label:'자전거', icon:'bike'},
+    {label:'킥보드', icon:'scooter'},
+    {label:'스케이트', icon:'skate'},
     {label:'스키.스노보드', icon:'ski'},
     {label:'볼링용품', icon:'bowling'},
-    {label:'인라인 스케이트', icon:'inline-skate'},
-    {label:'스케이트', icon:'ice-skate'},
-    {label:'킥보드', icon:'kickboard'},
-    {label:'낚시용품', icon:'fish'},
+    {label:'재봉틀', icon:'sewing'},
     {label:'병풍', icon:'screen'},
-    {label:'재봉틀', icon:'scissors'},
     {label:'항아리', icon:'jar'},
-    {label:'청소도구', icon:'broom'},
+    {label:'전기히터', icon:'heater'},
+    {label:'선풍기', icon:'fan'},
   ]},
 ];
 
@@ -1472,10 +1494,10 @@ function variantLabelOf(cat, key){
 
 const QTY_LABELS = [
   '액자(대):72inch','액자(중):36inch','액자(소):18inch','도자기','카페트/돗자리','장식품 (스탠딩)','조각','작은 스피커',
-  '전기장판','램프','가습기','이불','거울','옷 & 의류','스탠드',
+  '전기장판','램프','가습기','이불','전신 거울','옷 & 의류','스탠드',
   '컴퓨터','프린터','LP, CD, DVD','레고,Figure','책','문구류 및 잡화','서류 및 파일',
   '그릇','전기밥솥','커피머신','냄비','부엌잡화','주방기구','전자레인지','정수기','교자상','식기세척기','식기건조기',
-  '전기히터','진공청소기','선풍기','PVC 박스','스키.스노보드','자전거','골프용품','볼링용품','인라인 스케이트','스케이트','킥보드','낚시용품','등산용품','병풍','재봉틀','항아리','청소도구','신발','욕실용품','캠핑장비',
+  '전기히터','진공청소기','선풍기','PVC 박스','스키.스노보드','자전거','골프용품','볼링용품','스케이트','킥보드','낚시용품','등산용품','병풍','재봉틀','항아리','청소도구','신발','욕실용품','캠핑장비',
 ];
 const QTY_SET = new Set(QTY_LABELS.map(norm));
 const SIZE_DATA = {
@@ -1493,7 +1515,7 @@ const SIZE_DATA = {
   '스탠드': 'S',
   '가습기': 'S',
   '이불': 'L',
-  '거울': 'S',
+  '전신거울': 'S',
   '책': 'S',
   '문구류및잡화': 'S',
   '컴퓨터': 'S',
@@ -1530,11 +1552,10 @@ const SIZE_DATA = {
   '병풍': 'M',
   '캠핑장비': 'S',
   '선풍기': 'S',
-  '인라인스케이트': 'S',
   '재봉틀': 'S',
 };
 SECTIONS.forEach(sec=>{
-  sec.items.forEach(it=>{ it.mode = QTY_SET.has(norm(it.label)) ? 'qty' : 'photo'; });
+  sec.items.forEach(it=>{ it.mode = (it.qtyGroup || QTY_SET.has(norm(it.label))) ? 'qty' : 'photo'; });
 });
 
 // ===== 예상 견적 자동계산 엔진 =====
@@ -1609,6 +1630,55 @@ function findCat(id){
   }
   return null;
 }
+
+function findCatByLabel(label){
+  return SECTIONS.flatMap(s=>s.items).find(it=>it.label===label);
+}
+
+/* ===== 크기별 수량 묶음 (액자 등) =====
+   카드 하나로 묶어 목록을 짧게 유지하고, 누르면 크기별 수량을 한 화면에서 정한다.
+   저장되는 항목 이름과 부피는 예전 개별 항목 그대로라 견적서에 변화가 없다. */
+const QTY_GROUP_NAMES = {
+  '액자(대):72inch': '대형 액자 : 72inch',
+  '액자(중):36inch': '중형 액자 : 36inch',
+  '액자(소):18inch': '소형 액자 : 18inch',
+};
+
+function renderQtyGroupRows(cat){
+  const box = document.getElementById('qtygroup-rows');
+  box.innerHTML = cat.qtyGroup.map(label=>{
+    const c = findCatByLabel(label);
+    const qty = state.items.find(i=>i.catId===c.id)?.qty || 0;
+    return `
+      <div class="qg-row" data-cat="${c.id}">
+        <div class="qg-name">${QTY_GROUP_NAMES[label] || label}</div>
+        <div class="qty-stepper">
+          <button class="step minus" data-role="minus" ${qty===0?'disabled':''}>−</button>
+          <span class="num">${qty}</span>
+          <button class="step plus" data-role="plus">+</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  box.querySelectorAll('.qg-row').forEach(row=>{
+    const c = findCat(row.dataset.cat);
+    row.querySelector('[data-role="minus"]').addEventListener('click', ()=>{
+      updateQty(c, -1); renderQtyGroupRows(cat);
+    });
+    row.querySelector('[data-role="plus"]').addEventListener('click', ()=>{
+      updateQty(c, +1); renderQtyGroupRows(cat);
+    });
+  });
+}
+
+function openQtyGroup(cat){
+  document.getElementById('qtygroup-title').textContent = cat.label;
+  renderQtyGroupRows(cat);
+  document.getElementById('qtygroup-modal').classList.remove('hidden');
+}
+document.getElementById('qtygroup-close').addEventListener('click', ()=>{
+  document.getElementById('qtygroup-modal').classList.add('hidden');
+});
 
 // 한 품목을 여러 개 찍을 수 있는 상한. 넘기면 사진 업로드 시간이 지나치게 길어진다.
 const MAX_PER_CATEGORY = 5;
@@ -1734,41 +1804,60 @@ function visibleBarTop(){
 function snapOverlappedElement(){
   if(snapping) return;
   if(anyOpenModal()) return;
+  const cal = document.getElementById('cal-overlay');
+  if(cal && cal.classList.contains('show')) return;
   if(!document.getElementById('camera-modal').classList.contains('hidden')) return;
   const barTop = visibleBarTop();
   if(barTop === null) return;
 
-  // 이미 맨 아래까지 내려왔으면 더 움직일 수 없으니 그대로 둔다
   const atBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 2;
+  const atTop = window.scrollY <= 0;
 
   const active = document.querySelector('.screen.active');
   if(!active) return;
+
+  // 버튼 선에 걸쳐 있는 것들 중 가장 아래 것을 기준으로 삼는다.
+  // (3열 격자에서는 같은 줄의 카드 여러 개가 동시에 걸치므로 하나만 보면 된다)
+  let target = null;
   for(const el of active.querySelectorAll(SNAP_SEL)){
     const r = el.getBoundingClientRect();
-    if(r.height === 0) continue;
-    if(r.top >= barTop || r.bottom <= barTop) continue;   // 걸쳐 있지 않음
-
-    const mid = (r.top + r.bottom) / 2;
-    let delta;
-    if(mid < barTop){
-      if(atBottom) return;                                 // 더 내릴 수 없음
-      delta = r.bottom - (barTop - SNAP_MARGIN);            // 통째로 위로
-    }else{
-      delta = r.top - (barTop + SNAP_MARGIN);               // 통째로 아래로 (음수)
-    }
-    if(Math.abs(delta) < 6) return;                         // 거의 맞아 있으면 건드리지 않음
-
-    snapping = true;
-    window.scrollBy({top: delta, behavior: 'smooth'});
-    setTimeout(()=>{ snapping = false; }, 450);
-    return;
+    if(r.height === 0 || r.height > barTop - 20) continue;   // 화면보다 큰 요소는 대상 아님
+    if(r.top < barTop && r.bottom > barTop) target = el;
   }
+  if(!target) return;
+
+  // 어떤 요소의 "윗변"을 버튼 선에 정확히 맞추면, 그 위 박스는 원래 간격을
+  // 그대로 유지한 채 버튼과 떨어진다. (여백을 따로 더하면 오히려 붙어 보인다)
+  const all = [...active.querySelectorAll(SNAP_SEL)].filter(el=>el.getBoundingClientRect().height>0);
+  const r = target.getBoundingClientRect();
+  const mid = (r.top + r.bottom) / 2;
+  let delta;
+  if(mid < barTop){
+    if(atBottom) return;                                   // 더 내릴 수 없음
+    // 절반 이상 보임 → 이 박스를 다 보이게. 바로 아래 박스의 윗변을 버튼 선에 맞춘다
+    const next = all.find(el=>el.getBoundingClientRect().top > r.top + 1);
+    delta = next
+      ? next.getBoundingClientRect().top - barTop
+      : r.bottom + SNAP_MARGIN - barTop;                   // 마지막 박스면 기본 여백
+  }else{
+    if(atTop) return;                                      // 더 올릴 수 없음
+    delta = r.top - barTop;                                // 절반 이상 가려짐 → 통째로 아래로
+  }
+  if(Math.abs(delta) < 6) return;                          // 거의 맞아 있으면 그대로
+
+  // 스스로 만든 스크롤이 다시 정렬을 부르지 않도록 잠근다.
+  // (잠그지 않으면 다음 줄이 또 걸쳐서 맨 아래까지 계속 밀려 내려간다)
+  snapping = true;
+  window.scrollBy({top: delta, behavior: 'smooth'});
+  setTimeout(()=>{ snapping = false; }, 700);
 }
 
 window.addEventListener('scroll', ()=>{
+  if(snapping) return;                 // 프로그램이 움직이는 중에는 반응하지 않는다
   clearTimeout(snapTimer);
   snapTimer = setTimeout(snapOverlappedElement, 160);   // 손가락을 뗀 뒤에만 움직인다
 }, {passive:true});
+
 function syncBottomPadding(){
   for(let i=1;i<=3;i++){
     const bar = document.getElementById('bar-'+i);
@@ -2112,7 +2201,7 @@ function renderTabs(){
 }
 
 const ICONS = {
-  'archive': '<rect x=\'3\' y=\'4\' width=\'18\' height=\'4\' rx=\'1\'/><path d=\'M4 8v10a2 2 0 002 2h12a2 2 0 002-2V8\'/><line x1=\'10\' y1=\'13\' x2=\'14\' y2=\'13\'/>',
+  'archive': '<rect x=\'5\' y=\'4\' width=\'14\' height=\'15\' rx=\'1.5\'/><line x1=\'5\' y1=\'9\' x2=\'19\' y2=\'9\'/><line x1=\'5\' y1=\'14\' x2=\'19\' y2=\'14\'/><line x1=\'10\' y1=\'6.5\' x2=\'14\' y2=\'6.5\'/><line x1=\'10\' y1=\'11.5\' x2=\'14\' y2=\'11.5\'/><line x1=\'10\' y1=\'16.5\' x2=\'14\' y2=\'16.5\'/><circle cx=\'8\' cy=\'20.6\' r=\'1\'/><circle cx=\'16\' cy=\'20.6\' r=\'1\'/>',
   'armchair': '<path d=\'M5 11V7a3 3 0 016 0v1h2V7a3 3 0 016 0v4\'/><path d=\'M4 11h16v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z\'/><line x1=\'6\' y1=\'18\' x2=\'6\' y2=\'20\'/><line x1=\'18\' y1=\'18\' x2=\'18\' y2=\'20\'/>',
   'baby': '<circle cx=\'12\' cy=\'7\' r=\'3\'/><path d=\'M7 21c0-4 2-7 5-7s5 3 5 7\'/>',
   'bed': '<rect x=\'2\' y=\'11\' width=\'20\' height=\'7\' rx=\'1.5\'/><path d=\'M4 11V8a2 2 0 012-2h5a2 2 0 012 2v3\'/><rect x=\'4.5\' y=\'7\' width=\'4\' height=\'2.4\' rx=\'1\'/><line x1=\'2\' y1=\'18\' x2=\'2\' y2=\'20.5\'/><line x1=\'22\' y1=\'18\' x2=\'22\' y2=\'20.5\'/>',
@@ -2147,7 +2236,7 @@ const ICONS = {
   'printer': '<path d=\'M6 9V4h12v5\'/><rect x=\'4\' y=\'9\' width=\'16\' height=\'7\' rx=\'1\'/><path d=\'M6 14h12v6H6z\'/>',
   'puzzle': '<rect x=\'4\' y=\'4\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'13\' y=\'4\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'4\' y=\'13\' width=\'7\' height=\'7\' rx=\'1\'/><rect x=\'13\' y=\'13\' width=\'7\' height=\'7\' rx=\'1\'/><circle cx=\'12\' cy=\'12\' r=\'1.6\' fill=\'currentColor\' stroke=\'none\'/>',
   'refrigerator': '<rect x=\'6\' y=\'2\' width=\'12\' height=\'20\' rx=\'1.5\'/><line x1=\'6\' y1=\'9\' x2=\'18\' y2=\'9\'/><line x1=\'9\' y1=\'4.5\' x2=\'9\' y2=\'7\'/><line x1=\'9\' y1=\'11.5\' x2=\'9\' y2=\'14\'/>',
-  'rocking-chair': '<line x1=\'7\' y1=\'3\' x2=\'7\' y2=\'13\'/><line x1=\'15\' y1=\'3\' x2=\'15\' y2=\'13\'/><line x1=\'7\' y1=\'7\' x2=\'15\' y2=\'7\'/><line x1=\'6\' y1=\'13\' x2=\'16\' y2=\'13\'/><path d=\'M2 19c3-3 6-3 9 0M11 19c3-3 6-3 9 0\'/>',
+  'rocking-chair': '<path d=\'M7.5 3.5L9.8 13H18\'/><path d=\'M8.2 6.6l3.4 .8\'/><path d=\'M8.9 9.8l3.4 .8\'/><line x1=\'10.3\' y1=\'13\' x2=\'9.3\' y2=\'18\'/><line x1=\'17\' y1=\'13\' x2=\'16.4\' y2=\'18\'/><path d=\'M4.5 18.3c4 3.2 11 3.2 15 0\'/>',
   'scissors': '<circle cx=\'6\' cy=\'6\' r=\'2.4\'/><circle cx=\'6\' cy=\'18\' r=\'2.4\'/><line x1=\'8\' y1=\'7.5\' x2=\'20\' y2=\'19\'/><line x1=\'8\' y1=\'16.5\' x2=\'20\' y2=\'5\'/>',
   'shirt': '<path d=\'M8 4L4 7l2 3 2-1.5V21h8V8.5L18 10l2-3-4-3-2 2h-4l-2-2z\'/>',
   'sofa': '<path d=\'M5 10V8a2 2 0 012-2h10a2 2 0 012 2v2\'/><path d=\'M3 12a2 2 0 012-2h14a2 2 0 012 2v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4z\'/><line x1=\'5\' y1=\'17\' x2=\'5\' y2=\'20\'/><line x1=\'19\' y1=\'17\' x2=\'19\' y2=\'20\'/>',
@@ -2187,22 +2276,22 @@ const ICONS = {
   'display-cabinet': '<rect x=\'5\' y=\'2\' width=\'14\' height=\'20\' rx=\'1\'/><line x1=\'5\' y1=\'12\' x2=\'19\' y2=\'12\'/><line x1=\'9\' y1=\'2\' x2=\'9\' y2=\'12\'/><line x1=\'15\' y1=\'2\' x2=\'15\' y2=\'12\'/>',
   'dispenser': '<rect x=\'6\' y=\'3\' width=\'12\' height=\'18\' rx=\'1.5\'/><rect x=\'9\' y=\'6\' width=\'6\' height=\'4\' rx=\'0.5\'/><line x1=\'12\' y1=\'13\' x2=\'12\' y2=\'15\'/><path d=\'M10 15h4l-1 3h-2z\'/>',
   'low-table': '<rect x=\'3\' y=\'11\' width=\'18\' height=\'2\' rx=\'1\'/><path d=\'M5.5 13l-1.5 6M18.5 13l1.5 6\'/>',
-  'crib': '<rect x=\'4\' y=\'10\' width=\'16\' height=\'7\' rx=\'1\'/><line x1=\'4\' y1=\'10\' x2=\'4\' y2=\'5\'/><line x1=\'7.2\' y1=\'10\' x2=\'7.2\' y2=\'5\'/><line x1=\'10.4\' y1=\'10\' x2=\'10.4\' y2=\'5\'/><line x1=\'13.6\' y1=\'10\' x2=\'13.6\' y2=\'5\'/><line x1=\'16.8\' y1=\'10\' x2=\'16.8\' y2=\'5\'/><line x1=\'20\' y1=\'10\' x2=\'20\' y2=\'5\'/><line x1=\'2\' y1=\'17\' x2=\'2\' y2=\'20.5\'/><line x1=\'22\' y1=\'17\' x2=\'22\' y2=\'20.5\'/>',
-  'corner-cabinet': '<path d=\'M4 21V6l14 15z\'/><line x1=\'4\' y1=\'14\' x2=\'11\' y2=\'14\'/><circle cx=\'7\' cy=\'17.5\' r=\'0.7\' fill=\'currentColor\' stroke=\'none\'/>',
+  'crib': '<rect x=\'3.5\' y=\'5\' width=\'17\' height=\'12\' rx=\'1.5\'/><line x1=\'3.5\' y1=\'13\' x2=\'20.5\' y2=\'13\'/><line x1=\'7.5\' y1=\'5\' x2=\'7.5\' y2=\'13\'/><line x1=\'11\' y1=\'5\' x2=\'11\' y2=\'13\'/><line x1=\'14.5\' y1=\'5\' x2=\'14.5\' y2=\'13\'/><line x1=\'18\' y1=\'5\' x2=\'18\' y2=\'13\'/><line x1=\'5.5\' y1=\'17\' x2=\'5.5\' y2=\'20\'/><line x1=\'18.5\' y1=\'17\' x2=\'18.5\' y2=\'20\'/>',
+  'corner-cabinet': '<rect x=\'6\' y=\'3\' width=\'12\' height=\'17\' rx=\'1\'/><line x1=\'12\' y1=\'3\' x2=\'12\' y2=\'20\'/><line x1=\'6\' y1=\'11.5\' x2=\'18\' y2=\'11.5\'/><circle cx=\'10.8\' cy=\'13.6\' r=\'.75\'/><circle cx=\'13.2\' cy=\'13.6\' r=\'.75\'/><line x1=\'7.8\' y1=\'20\' x2=\'7.8\' y2=\'21.6\'/><line x1=\'16.2\' y1=\'20\' x2=\'16.2\' y2=\'21.6\'/>',
   'antique-chest': '<rect x=\'4\' y=\'5\' width=\'16\' height=\'11\' rx=\'1\'/><line x1=\'4\' y1=\'10.5\' x2=\'20\' y2=\'10.5\'/><rect x=\'9\' y=\'6.8\' width=\'6\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><rect x=\'9\' y=\'12.3\' width=\'6\' height=\'1.3\' rx=\'0.6\' fill=\'currentColor\' stroke=\'none\'/><path d=\'M6 16l-1.5 5M18 16l1.5 5\'/>',
   'trunk': '<path d=\'M3 10a2 2 0 012-2h14a2 2 0 012 2v8H3z\'/><path d=\'M3 10c0-2.5 2-4 4-4h10c2 0 4 1.5 4 4\'/><rect x=\'10.5\' y=\'10.5\' width=\'3\' height=\'2\' rx=\'0.4\' fill=\'currentColor\' stroke=\'none\'/>',
   'side-table': '<ellipse cx=\'12\' cy=\'7\' rx=\'7\' ry=\'2.2\'/><line x1=\'6\' y1=\'8\' x2=\'6\' y2=\'19\'/><line x1=\'18\' y1=\'8\' x2=\'18\' y2=\'19\'/><line x1=\'12\' y1=\'9.2\' x2=\'12\' y2=\'19\'/>',
   'humidifier': '<path d=\'M12 21a4 4 0 01-4-4c0-3 4-8 4-8s4 5 4 8a4 4 0 01-4 4z\'/><path d=\'M8 3c0 .8-.6 1-.6 1.8S8 6 8 6.8M12 3c0 .8-.6 1-.6 1.8s.6 1 .6 1.8M16 3c0 .8-.6 1-.6 1.8s.6 1 .6 1.8\'/>',
-  'blanket': '<path d=\'M3 16c3-1.5 6-1.5 9 0s6 1.5 9 0\'/><path d=\'M3 12c3-1.5 6-1.5 9 0s6 1.5 9 0\'/><path d=\'M3 20c3-1.5 6-1.5 9 0s6 1.5 9 0\'/>',
+  'blanket': '<path d=\'M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v9H4z\'/><line x1=\'4\' y1=\'13\' x2=\'20\' y2=\'13\'/><line x1=\'9\' y1=\'13\' x2=\'9\' y2=\'19\'/><line x1=\'15\' y1=\'13\' x2=\'15\' y2=\'19\'/>',
   'mirror': '<ellipse cx=\'12\' cy=\'9\' rx=\'6\' ry=\'7\'/><line x1=\'12\' y1=\'16\' x2=\'12\' y2=\'20\'/><line x1=\'8\' y1=\'20\' x2=\'16\' y2=\'20\'/>',
   'bookshelf': '<rect x=\'4\' y=\'2\' width=\'16\' height=\'20\' rx=\'1\'/><line x1=\'4\' y1=\'9\' x2=\'20\' y2=\'9\'/><line x1=\'4\' y1=\'15.5\' x2=\'20\' y2=\'15.5\'/><line x1=\'7\' y1=\'4\' x2=\'7\' y2=\'8\'/><line x1=\'9.5\' y1=\'4\' x2=\'9.5\' y2=\'8\'/><line x1=\'12\' y1=\'4\' x2=\'12\' y2=\'8\'/>',
   'office-chair': '<rect x=\'7\' y=\'4\' width=\'10\' height=\'7\' rx=\'1.5\'/><line x1=\'12\' y1=\'11\' x2=\'12\' y2=\'16\'/><path d=\'M12 16l-5 2M12 16l5 2M12 16l0 3\'/><line x1=\'12\' y1=\'19\' x2=\'12\' y2=\'21\'/><line x1=\'9\' y1=\'21\' x2=\'15\' y2=\'21\'/>',
   'plain-chair': '<line x1=\'6\' y1=\'2\' x2=\'6\' y2=\'11\'/><rect x=\'6\' y=\'11\' width=\'11\' height=\'1.6\' rx=\'0.4\'/><line x1=\'7\' y1=\'12.6\' x2=\'7\' y2=\'21\'/><line x1=\'16\' y1=\'12.6\' x2=\'16\' y2=\'21\'/><line x1=\'6\' y1=\'6\' x2=\'11\' y2=\'6\'/>',
-  'folding-chair': '<path d=\'M4 20L12 4L20 20\'/><path d=\'M4 20L12 12L20 20\'/><line x1=\'7\' y1=\'9\' x2=\'17\' y2=\'9\'/>',
+  'folding-chair': '<path d=\'M7 20.5L16.2 5\'/><path d=\'M16.2 20.5L7.6 8.2\'/><line x1=\'6\' y1=\'13.2\' x2=\'15.2\' y2=\'13.2\'/><line x1=\'13.6\' y1=\'5\' x2=\'17\' y2=\'5\'/><line x1=\'5.6\' y1=\'20.5\' x2=\'8.6\' y2=\'20.5\'/><line x1=\'14.6\' y1=\'20.5\' x2=\'17.6\' y2=\'20.5\'/>',
   'computer-desk': '<rect x=\'7\' y=\'3\' width=\'10\' height=\'7\' rx=\'1\'/><line x1=\'12\' y1=\'10\' x2=\'12\' y2=\'12\'/><line x1=\'3\' y1=\'16\' x2=\'21\' y2=\'16\'/><line x1=\'5\' y1=\'16\' x2=\'5\' y2=\'21\'/><line x1=\'19\' y1=\'16\' x2=\'19\' y2=\'21\'/>',
   'lego': '<rect x=\'4\' y=\'9\' width=\'16\' height=\'10\' rx=\'1.5\'/><circle cx=\'8\' cy=\'6.5\' r=\'2\'/><circle cx=\'16\' cy=\'6.5\' r=\'2\'/><line x1=\'8\' y1=\'6.5\' x2=\'8\' y2=\'9\'/><line x1=\'16\' y1=\'6.5\' x2=\'16\' y2=\'9\'/>',
-  'desk': '<line x1=\'2\' y1=\'9\' x2=\'22\' y2=\'9\'/><path d=\'M4 9V6a1 1 0 011-1h14a1 1 0 011 1v3\'/><rect x=\'9\' y=\'11\' width=\'6\' height=\'2.2\' rx=\'0.4\'/><line x1=\'4\' y1=\'9\' x2=\'4\' y2=\'20\'/><line x1=\'20\' y1=\'9\' x2=\'20\' y2=\'20\'/>',
-  'dining-table2': '<rect x=\'2\' y=\'7\' width=\'20\' height=\'2\' rx=\'1\'/><line x1=\'5\' y1=\'9\' x2=\'5\' y2=\'19\'/><line x1=\'9\' y1=\'9\' x2=\'9\' y2=\'19\'/><line x1=\'15\' y1=\'9\' x2=\'15\' y2=\'19\'/><line x1=\'19\' y1=\'9\' x2=\'19\' y2=\'19\'/>',
+  'desk': '<path d=\'M2.5 9.5h19\'/><line x1=\'4\' y1=\'9.5\' x2=\'4\' y2=\'20\'/><line x1=\'20\' y1=\'9.5\' x2=\'20\' y2=\'20\'/><rect x=\'12.5\' y=\'11.3\' width=\'7.5\' height=\'8.7\' rx=\'.6\'/><line x1=\'12.5\' y1=\'14.2\' x2=\'20\' y2=\'14.2\'/><line x1=\'12.5\' y1=\'17.1\' x2=\'20\' y2=\'17.1\'/>',
+  'dining-table2': '<rect x=\'6\' y=\'8\' width=\'12\' height=\'8\' rx=\'1.5\'/><rect x=\'2.4\' y=\'9.6\' width=\'2.6\' height=\'4.8\' rx=\'1\'/><rect x=\'19\' y=\'9.6\' width=\'2.6\' height=\'4.8\' rx=\'1\'/><rect x=\'9.6\' y=\'4\' width=\'4.8\' height=\'2.6\' rx=\'1\'/><rect x=\'9.6\' y=\'17.4\' width=\'4.8\' height=\'2.6\' rx=\'1\'/>',
   'dining-chair2': '<path d=\'M6 2v11\'/><line x1=\'6\' y1=\'6\' x2=\'10\' y2=\'6\'/><rect x=\'5\' y=\'13\' width=\'13\' height=\'2\' rx=\'0.6\'/><line x1=\'7\' y1=\'15\' x2=\'7\' y2=\'21\'/><line x1=\'16\' y1=\'15\' x2=\'16\' y2=\'21\'/>',
   'bowl': '<ellipse cx=\'12\' cy=\'9.5\' rx=\'8\' ry=\'2.2\'/><path d=\'M4 9.5h16a8 5 0 01-16 0z\'/>',
   'console-table': '<rect x=\'2\' y=\'4\' width=\'20\' height=\'2\' rx=\'1\'/><line x1=\'4.5\' y1=\'6\' x2=\'4.5\' y2=\'19\'/><line x1=\'19.5\' y1=\'6\' x2=\'19.5\' y2=\'19\'/><line x1=\'4.5\' y1=\'19\' x2=\'19.5\' y2=\'19\'/>',
@@ -2215,6 +2304,22 @@ const ICONS = {
   'duvet': '<path d=\'M3 8h14v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8z\'/><path d=\'M17 8l4 4v6a2 2 0 01-2 2h-2\'/><line x1=\'6\' y1=\'12\' x2=\'14\' y2=\'12\'/><line x1=\'6\' y1=\'16\' x2=\'14\' y2=\'16\'/>',
   'kickboard': '<circle cx=\'5\' cy=\'20\' r=\'1.5\'/><circle cx=\'17\' cy=\'20\' r=\'1.5\'/><path d=\'M5 20h10l4-14\'/><line x1=\'17\' y1=\'6\' x2=\'21\' y2=\'6\'/>',
   'reading-table': '<rect x=\'3\' y=\'8\' width=\'18\' height=\'2\' rx=\'1\'/><line x1=\'5.5\' y1=\'10\' x2=\'5.5\' y2=\'20\'/><line x1=\'18.5\' y1=\'10\' x2=\'18.5\' y2=\'20\'/>',
+  'nightstand': '<rect x=\'5\' y=\'6\' width=\'14\' height=\'11\' rx=\'1\'/><line x1=\'5\' y1=\'11.5\' x2=\'19\' y2=\'11.5\'/><rect x=\'10\' y=\'8.3\' width=\'4\' height=\'1.2\' rx=\'.6\' fill=\'currentColor\' stroke=\'none\'/><rect x=\'10\' y=\'13.8\' width=\'4\' height=\'1.2\' rx=\'.6\' fill=\'currentColor\' stroke=\'none\'/><line x1=\'7\' y1=\'17\' x2=\'7\' y2=\'20\'/><line x1=\'17\' y1=\'17\' x2=\'17\' y2=\'20\'/>',
+  'floor-lamp': '<path d=\'M7.5 10l2-6h5l2 6z\'/><line x1=\'12\' y1=\'10\' x2=\'12\' y2=\'19\'/><path d=\'M8.5 20.5h7\'/>',
+  'heat-mat': '<rect x=\'3\' y=\'7\' width=\'14\' height=\'10\' rx=\'1.5\'/><path d=\'M6 10.5h8\'/><path d=\'M6 13.5h8\'/><path d=\'M17 12h2a2 2 0 0 1 2 2v3\'/>',
+  'dryer': '<rect x=\'4\' y=\'3\' width=\'16\' height=\'18\' rx=\'1.5\'/><circle cx=\'12\' cy=\'13\' r=\'5\'/><path d=\'M10 11c0 .8.8 1.2.8 2s-.8 1.2-.8 2\'/><path d=\'M14 11c0 .8-.8 1.2-.8 2s.8 1.2.8 2\'/><line x1=\'7\' y1=\'6\' x2=\'8\' y2=\'6\'/><line x1=\'10\' y1=\'6\' x2=\'11\' y2=\'6\'/>',
+  'shoe': '<path d=\'M3 17v-6h3.5l2.5 2H15c3 0 6 1.7 6 4v1z\'/><path d=\'M6.5 11l2 2.2\'/><line x1=\'3\' y1=\'19.5\' x2=\'21\' y2=\'19.5\'/>',
+  'vacuum': '<path d=\'M13 11h3a4 4 0 0 1 4 4v3a2 2 0 0 1-2 2h-5z\'/><path d=\'M13 11V5a2 2 0 0 0-2-2H9\'/><path d=\'M13 20H5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h8\'/>',
+  'bath': '<path d=\'M7 10h6v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z\'/><path d=\'M8.5 10V7h3v3\'/><line x1=\'8.5\' y1=\'4.5\' x2=\'11.5\' y2=\'4.5\'/><path d=\'M18.5 12c1.6 2.1 2.2 3.2 2.2 4.2a2.2 2.2 0 0 1-4.4 0c0-1 .6-2.1 2.2-4.2z\'/>',
+  'scooter': '<circle cx=\'5\' cy=\'18\' r=\'2.5\'/><circle cx=\'18.5\' cy=\'18\' r=\'2.5\'/><path d=\'M7.5 18h8.2\'/><path d=\'M16 18l2-11\'/><path d=\'M15.5 6.2h4.2\'/>',
+  'skate': '<path d=\'M8 3v9l4.5 1.8V17H8a2 2 0 0 1-2-2V3z\'/><line x1=\'4.5\' y1=\'19\' x2=\'19.5\' y2=\'19\'/><line x1=\'6.5\' y1=\'17\' x2=\'6.5\' y2=\'19\'/><line x1=\'17.5\' y1=\'17\' x2=\'17.5\' y2=\'19\'/>',
+  'sewing': '<path d=\'M3.5 19.5h17\'/><path d=\'M5 19.5v-3h9v3\'/><path d=\'M7.5 16.5V7h8.5a3 3 0 0 1 3 3v2.5\'/><line x1=\'18\' y1=\'12.5\' x2=\'18\' y2=\'16.5\'/>',
+  'bunk-bed': '<line x1=\'3.5\' y1=\'3.5\' x2=\'3.5\' y2=\'20.5\'/><line x1=\'15.5\' y1=\'3.5\' x2=\'15.5\' y2=\'20.5\'/><rect x=\'3.5\' y=\'8.6\' width=\'12\' height=\'2.4\' rx=\'.6\'/><rect x=\'3.5\' y=\'16.6\' width=\'12\' height=\'2.4\' rx=\'.6\'/><line x1=\'3.5\' y1=\'6\' x2=\'15.5\' y2=\'6\'/><line x1=\'3.5\' y1=\'14\' x2=\'15.5\' y2=\'14\'/><line x1=\'18.2\' y1=\'8\' x2=\'18.2\' y2=\'20.5\'/><line x1=\'21.4\' y1=\'8\' x2=\'21.4\' y2=\'20.5\'/><line x1=\'18.2\' y1=\'11.5\' x2=\'21.4\' y2=\'11.5\'/><line x1=\'18.2\' y1=\'15\' x2=\'21.4\' y2=\'15\'/><line x1=\'18.2\' y1=\'18.5\' x2=\'21.4\' y2=\'18.5\'/>',
+  'stone-bed': '<rect x=\'2.5\' y=\'11\' width=\'19\' height=\'7\' rx=\'1\'/><line x1=\'2.5\' y1=\'14.4\' x2=\'21.5\' y2=\'14.4\'/><rect x=\'4.6\' y=\'7.4\' width=\'5.2\' height=\'2.9\' rx=\'1.2\'/><circle cx=\'7.5\' cy=\'16.3\' r=\'.55\' fill=\'currentColor\' stroke=\'none\'/><circle cx=\'12\' cy=\'16.3\' r=\'.55\' fill=\'currentColor\' stroke=\'none\'/><circle cx=\'16.5\' cy=\'16.3\' r=\'.55\' fill=\'currentColor\' stroke=\'none\'/><line x1=\'3.5\' y1=\'18\' x2=\'3.5\' y2=\'20.3\'/><line x1=\'20.5\' y1=\'18\' x2=\'20.5\' y2=\'20.3\'/>',
+  'dining-8': '<rect x=\'5.5\' y=\'8.6\' width=\'13\' height=\'6.8\' rx=\'1.5\'/><rect x=\'6.3\' y=\'4.3\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'10.3\' y=\'4.3\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'14.3\' y=\'4.3\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'6.3\' y=\'17.1\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'10.3\' y=\'17.1\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'14.3\' y=\'17.1\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'1.8\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/><rect x=\'19.6\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/>',
+  'dining-6': '<rect x=\'5.5\' y=\'8.6\' width=\'13\' height=\'6.8\' rx=\'1.5\'/><rect x=\'7.6\' y=\'4.3\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'13.0\' y=\'4.3\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'7.6\' y=\'17.1\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'13.0\' y=\'17.1\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'1.8\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/><rect x=\'19.6\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/>',
+  'dining-4': '<rect x=\'5.5\' y=\'8.6\' width=\'13\' height=\'6.8\' rx=\'1.5\'/><rect x=\'10.3\' y=\'4.3\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'10.3\' y=\'17.1\' width=\'3.4\' height=\'2.6\' rx=\'.9\'/><rect x=\'1.8\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/><rect x=\'19.6\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/>',
+  'dining-2': '<rect x=\'7\' y=\'8.6\' width=\'10\' height=\'6.8\' rx=\'1.5\'/><rect x=\'3\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/><rect x=\'18.4\' y=\'10.2\' width=\'2.6\' height=\'3.6\' rx=\'.9\'/>',
 };
 
 const listEl = document.getElementById('item-list');
@@ -2291,6 +2396,7 @@ function renderItemList(){
   let items = term
     ? SECTIONS.flatMap(s=>s.items).filter(it=>it.label.toLowerCase().includes(term))
     : sec.items;
+  items = items.filter(it=>!it.hiddenInList);
   items = [...items].sort((a,b)=> (a.mode==='qty'?1:0) - (b.mode==='qty'?1:0));
 
   if(items.length===0){
@@ -2299,6 +2405,21 @@ function renderItemList(){
     listEl.innerHTML = items.map(it=>{
       const isQty = it.mode==='qty';
       const entries = state.items.filter(i=>i.catId===it.id);
+
+      if(it.qtyGroup){
+        const total = it.qtyGroup.reduce((sum,l)=>{
+          const c = findCatByLabel(l);
+          return sum + (state.items.find(i=>i.catId===c?.id)?.qty || 0);
+        }, 0);
+        return `
+          <div class="item-card qty-card ${total>0?'active':''}" data-cat="${it.id}" data-role="group">
+            ${total>0?`<div class="qty">×${total}</div>`:''}
+            <div class="icon">${svgIcon(it.icon, it.size)}</div>
+            <div class="lbl">${it.label}</div>
+            <div class="group-hint">크기 선택</div>
+          </div>
+        `;
+      }
 
       if(isQty){
         const qty = entries[0]?.qty || 0;
@@ -2355,7 +2476,9 @@ function renderItemList(){
 
     listEl.querySelectorAll('.item-card').forEach(card=>{
       const cat = findCat(card.dataset.cat);
-      if(cat.mode==='qty'){
+      if(cat.qtyGroup){
+        card.addEventListener('click', ()=> openQtyGroup(cat));
+      }else if(cat.mode==='qty'){
         card.querySelector('[data-role="minus"]').addEventListener('click', ()=> updateQty(cat, -1));
         card.querySelector('[data-role="plus"]').addEventListener('click', ()=> updateQty(cat, +1));
       }else{
@@ -2487,7 +2610,7 @@ function armBackGuard(){
 armBackGuard();
 
 function anyOpenModal(){
-  return ['variant-modal','assembly-modal','mismatch-modal','zone-modal','exit-modal']
+  return ['variant-modal','assembly-modal','mismatch-modal','zone-modal','qtygroup-modal','exit-modal']
     .map(id=>document.getElementById(id))
     .find(el=>el && !el.classList.contains('hidden'));
 }
