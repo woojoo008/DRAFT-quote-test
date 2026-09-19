@@ -1749,6 +1749,7 @@ const state = {
   customer:{name:'',email:'',phone:'',zip:'',dest:'',packingDate:'',floorCategory:''},
   items:[] // {catId,label,min,max,cuft,note,photo}
 };
+let aiSkippedCount = 0;   // AI 크기 판정을 못 한 사진 수 (접수 기록용)
 let activeCatId = null;
 let activeVariantKey = null;   // 구성 선택(Both/Mattress/Frame, Both/Table/Chair) — 촬영 직전에 정해짐
 let customSlots = [null, null]; // each entry: null (empty "사진찍기" box) or {photo, cloudUrl}
@@ -2942,6 +2943,7 @@ async function analyzePhoto(cat, imageUrl, variantKey){
     // 서버가 왜 판정을 못 했는지 알려주면 콘솔에 남긴다 (원인 파악용)
     if(parsed.reason && parsed.reason !== 'ok'){
       console.warn('AI 사진 판정 건너뜀 —', parsed.reason);
+      aiSkippedCount++;            // 접수 기록에 남겨 원인 추적에 쓴다
     }
     let tier = parseInt(parsed.tier);
     if(!Number.isInteger(tier) || tier<-10 || tier>10) tier = 0;
@@ -3128,6 +3130,7 @@ function countSubmitPhotos(){
 }
 
 async function runSubmitFlow(id){
+  aiSkippedCount = 0;   // 재시도 시 누적되지 않게 초기화
   goLoading();
   submitInFlight = true;
   startLoadingUi(countSubmitPhotos());
@@ -3574,6 +3577,7 @@ async function submitQuote(id){
   };
 
   const staffOk = await sendEmailWithRetry('staff', templateParams);
+  let customerPdfUrl = null;
 
   // ---- 고객용 견적서(PDF) 이메일 — 담당자 이메일과는 별개로 자동 발송됨 ----
   let customerOk = false;
@@ -3581,6 +3585,7 @@ async function submitQuote(id){
     try{
       const pdfDataUri = await generateQuotePdf(id);
       const pdfUrl = pdfDataUri ? await uploadToCloudinary(pdfDataUri) : null;
+      customerPdfUrl = pdfUrl;
       if(pdfUrl){
         const customerParams = {
           to_email: state.customer.email,
@@ -3595,6 +3600,26 @@ async function submitQuote(id){
     }catch(err){
       console.error('고객 견적서 이메일 발송 실패', err);
     }
+  }
+
+  // 접수 기록을 서버에 남긴다. 메일이 실패해도 신청 자체는 사라지지 않게 하기 위함이며,
+  // 실패 사실도 함께 저장돼 나중에 목록에서 바로 확인할 수 있다.
+  try{
+    await apiPost('/api/record', {record: {
+      id,
+      customer: state.customer,
+      items: record.items,
+      totalCbm: estimate?.totalCbm ?? null,
+      total: estimate?.total ?? null,
+      city: estimate?.matchedCity?.city || '',
+      galleryUrl: galleryUrl || '',
+      pdfUrl: customerPdfUrl || '',
+      staffOk, customerOk,
+      aiSkipped: aiSkippedCount,
+      photoCount: photoEntries.length,
+    }});
+  }catch(err){
+    console.error('접수 기록 저장 실패', err);
   }
 
   // 결과만 돌려주고, 화면 표시는 applySubmitResult()가 담당한다
